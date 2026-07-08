@@ -1,0 +1,6 @@
+.direnv
+.vscode
+.clang*
+build
+compile_commands.json
+.cache
