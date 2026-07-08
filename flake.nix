@@ -11,6 +11,7 @@
     {
       devShells.x86_64-linux.default = pkgs.mkShell {
         packages = with pkgs; [
+          gdb # dedicated gdb with pretty printing
           clang-tools
           gimp # inspect .ppm files
           bear # create clangd compile_commands.json

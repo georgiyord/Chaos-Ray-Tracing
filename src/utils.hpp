@@ -19,35 +19,50 @@ using i8    = int8_t;
 template <typename T>
 struct vec3
 {
-    union
-    {
-        struct
-        {
-            T x;
-            T y;
-            T z;
-        };
-        struct
-        {
-            T r;
-            T g;
-            T b;
-        };
-    };
+    T x;
+    T y;
+    T z;
 
     bool operator==(const vec3<T> &rhs) const
     {
         return (x == rhs.x) && (y == rhs.y) && (z == rhs.z);
     }
 
+    vec3<T> operator-(const vec3<T> &rhs) const
+    {
+        return {x - rhs.x, y - rhs.y, z - rhs.z};
+    }
+
+    T length(){
+        return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2));
+    }
+
     vec3<T>& normalise(){
-        double length = std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2));
-        if (length != 0){
-            x /= length;
-            y /= length;
-            z /= length;
+        double _length = length();
+        if (_length != 0){
+            x /= _length;
+            y /= _length;
+            z /= _length;
         }
         return *this;
+    }
+
+    friend vec3<T> crossProduct(const vec3<T>& a, const vec3<T>& b){
+        return vec3<T>{.x = a.y * b.z - a.z * b.y, .y = a.z * b.x - a.x * b.z , .z = a.x * b.y - a.y * b.x};
+    }
+
+    friend T dotProduct(const vec3<T>& a, const vec3<T>& b){
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+    }
+
+    template<typename K>
+    vec3<T> operator*(K scalar){
+        return vec3<T>{.x = this->x * scalar, .y = this->y * scalar, .z = this->z * scalar};
+    }
+
+    template<typename K>
+    friend vec3<T> operator*(K scalar, vec3<T> vec){
+        return vec3<T>{.x = vec->x * scalar, .y = vec->y * scalar, .z = vec->z * scalar};
     }
 };
 
@@ -243,6 +258,24 @@ const Color BLUE = {0, 0, 255};
 struct Ray{
     vec3<double> origin;
     vec3<double> direction;
+};
+
+struct Triangle{
+    vec3<double> point1;
+    vec3<double> point2;
+    vec3<double> point3;
+
+    vec3<double> getNormal(){
+        const vec3<double> vec1 = point2 - point1;
+        const vec3<double> vec2 = point3 - point1;
+        return crossProduct(vec1, vec2).normalise();
+    }
+
+    double getArea(){
+        const vec3<double> vec1 = point2 - point1;
+        const vec3<double> vec2 = point3 - point1;
+        return crossProduct(vec1, vec2).length() / 2;
+    }
 };
 
 #endif //__UTILS_CRT

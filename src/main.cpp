@@ -42,17 +42,17 @@ inline void createRechtsImage(const vec2<size_t> resolution)
         ColoredRecht(vec2<size_t> size) : Recht(size, {0, 0})
         {
             colors.push_back(Color{
-                .r = randColor(randEngine),
-                .g = randColor(randEngine),
-                .b = randColor(randEngine),
+                .x = randColor(randEngine),
+                .y = randColor(randEngine),
+                .z = randColor(randEngine),
             });
             bool newColor = true;
             while (newColor)
             {
                 colors.push_back(Color{
-                    .r = randColor(randEngine),
-                    .g = randColor(randEngine),
-                    .b = randColor(randEngine),
+                    .x = randColor(randEngine),
+                    .y = randColor(randEngine),
+                    .z = randColor(randEngine),
                 });
                 newColor = randBool(randEngine);
             }
@@ -80,7 +80,7 @@ inline void createRechtsImage(const vec2<size_t> resolution)
             auto weights = generateWeights(recht.colors);
             std::discrete_distribution<> d(weights.begin(), weights.end());
             Color c = recht.colors[d(randEngine)];
-            image << static_cast<u32>(c.r) << " " << static_cast<u32>(c.g) << " " << static_cast<u32>(c.b) << " ";
+            image << static_cast<u32>(c.x) << " " << static_cast<u32>(c.y) << " " << static_cast<u32>(c.z) << " ";
         }
     }
     image.close();
@@ -151,14 +151,39 @@ void createImageFromRayDirections(const vec2<size_t> resolution){
         for (size_t x = 0; x < resolution.x; ++x)
         {
             Color c {
-                .r = static_cast<u8>(std::abs(rays.get(x, y).direction.x) * 255),
-                .g = static_cast<u8>(std::abs(rays.get(x, y).direction.y) * 255),
-                .b = static_cast<u8>(rays.get(x, y).direction.z * -255)
+                .x = static_cast<u8>(std::abs(rays.get(x, y).direction.x) * 255),
+                .y = static_cast<u8>(std::abs(rays.get(x, y).direction.y) * 255),
+                .z = static_cast<u8>(rays.get(x, y).direction.z * -255)
             };
-            image << static_cast<u32>(c.r) << " " << static_cast<u32>(c.g) << " " << static_cast<u32>(c.b) << " ";
+            image << static_cast<u32>(c.x) << " " << static_cast<u32>(c.y) << " " << static_cast<u32>(c.z) << " ";
         }
     }
+}
 
+// Homework 4
+void crossProductTests(){
+    std::vector<vec3<double>> storageVectors;
+    std::vector<double> storageScalars;
+    // Task 2
+    {
+        storageVectors.push_back(crossProduct(vec3<double>{.x=3.5, .y=.0, .z=.0}, vec3<double>{.x=1.75, .y=3.5, .z=.0}));
+        storageVectors.push_back(crossProduct(vec3<double>{.x=3, .y=-3, .z=1}, vec3<double>{.x=4, .y=9, .z=3}));
+        storageScalars.push_back(crossProduct(vec3<double>{.x=3, .y=-3, .z=1}, vec3<double>{.x=4, .y=9, .z=3}).length());
+        storageScalars.push_back(crossProduct(vec3<double>{.x=3, .y=-3, .z=1}, vec3<double>{.x=-12, .y=12, .z=-4}).length());
+    }
+    // Task 3
+    {
+        Triangle t1{.point1={.x=-1.75, .y=-1.75, .z=-3}, .point2={.x=1.75, .y=-1.75, .z=-3}, .point3={.x=-0, .y=1.75, .z=-3}};
+        Triangle t2{.point1={.x=0, .y=0, .z=-1}, .point2={.x=1 ,.y=0, .z=1}, .point3={.x=-1, .y=0, .z=1}};
+        Triangle t3{.point1={.x=0.56, .y=1.11, .z=1.23}, .point2={.x=0.44, .y=-2.368, .z=-0.54}, .point3={.x=-1.56, .y=0.15, .z=-1.92}};
+        storageVectors.push_back(t1.getNormal());
+        storageVectors.push_back(t2.getNormal());
+        storageVectors.push_back(t3.getNormal());
+
+        storageScalars.push_back(t1.getArea());
+        storageScalars.push_back(t2.getArea());
+        storageScalars.push_back(t3.getArea());
+    }
 }
 
 int main(const int argc, const char **argv)
@@ -182,7 +207,8 @@ int main(const int argc, const char **argv)
 
     // createRechtsImage(resolution);
     // createShapeAccent(resolution);
-    createImageFromRayDirections(resolution);
+    // createImageFromRayDirections(resolution);
+    crossProductTests();
 
     return 0;
 }
