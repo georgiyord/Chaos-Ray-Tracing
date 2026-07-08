@@ -14,6 +14,8 @@
           clang-tools
           gimp # inspect .ppm files
           bear # create clangd compile_commands.json
+          perf
+          flamegraph
         ];
 
         inputsFrom = with pkgs; [ ];

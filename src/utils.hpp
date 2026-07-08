@@ -1,14 +1,20 @@
 #ifndef __UTILS_CRT
 #define __UTILS_CRT
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
 
-using u8 = uint8_t;
-using u32 = uint32_t;
-using i32 = int32_t;
+using u64   = uint64_t;
+using u32   = uint32_t;
+using u16   = uint16_t;
+using u8    = uint8_t;
+using i64   = int64_t;
+using i32   = int32_t;
+using i16   = int16_t;
+using i8    = int8_t;
 
 template <typename T>
 struct vec3
@@ -32,6 +38,16 @@ struct vec3
     bool operator==(const vec3<T> &rhs) const
     {
         return (x == rhs.x) && (y == rhs.y) && (z == rhs.z);
+    }
+
+    vec3<T>& normalise(){
+        double length = std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2));
+        if (length != 0){
+            x /= length;
+            y /= length;
+            z /= length;
+        }
+        return *this;
     }
 };
 
@@ -66,17 +82,18 @@ struct vec2
     }
 };
 
-template <typename T, vec2<size_t> size>
+template <typename T>
 class Matrix
 {
+    vec2<size_t> size;
     std::unique_ptr<T[]> arr;
 
 public:
-    Matrix() : arr(new T[size.volume()])
+    Matrix(vec2<size_t> _size) : size(_size), arr(new T[size.volume()])
     {
     }
 
-    Matrix(const Matrix &rhs) : arr(new T[size.volume()])
+    Matrix(const Matrix &rhs) : size(rhs.size), arr(new T[size.volume()])
     {
         for (u32 i = 0; i < size.volume(); ++i)
         {
@@ -88,6 +105,10 @@ public:
     {
         if (this != &rhs)
         {
+            if (size != rhs.size){
+                size = rhs.size;
+                arr = new T[size.volume()];
+            }
             for (u32 i = 0; i < size.volume(); ++i)
             {
                 arr[i] = rhs.arr[i];
@@ -175,18 +196,18 @@ enum class Anchor : u8
 
 class Shape
 {
-    vec2<size_t> pos;
+    vec2<u64> pos;
     Anchor anchor;
 
 protected:
-    Shape(vec2<size_t> _pos) : pos(_pos), anchor(Anchor::CENTER)
+    Shape(vec2<u64> _pos) : pos(_pos), anchor(Anchor::CENTER)
     {
     }
-    Shape(vec2<size_t> _pos, Anchor _anchor) : pos(_pos), anchor(_anchor)
+    Shape(vec2<u64> _pos, Anchor _anchor) : pos(_pos), anchor(_anchor)
     {
     }
 public:
-    [[nodiscard]] vec2<size_t> getPosition() const {
+    [[nodiscard]] vec2<u64> getPosition() const {
         return pos;
     }
 };
@@ -196,7 +217,7 @@ class Recht : public Shape
     vec2<size_t> size;
 
 public:
-    Recht(vec2<size_t> _size, vec2<size_t> _pos) : Shape(_pos), size(_size)
+    Recht(vec2<size_t> _size, vec2<u64> _pos) : Shape(_pos), size(_size)
     {
     }
 };
@@ -206,7 +227,7 @@ class Circle : public Shape
     size_t radius;
 
 public:
-    Circle(size_t _radius, vec2<size_t> _pos) : Shape(_pos), radius(_radius)
+    Circle(size_t _radius, vec2<u64> _pos) : Shape(_pos), radius(_radius)
     {
     }
     [[nodiscard]] size_t getRadius() const {
@@ -217,5 +238,11 @@ public:
 const Color RED = {255, 0, 0};
 const Color GREEN = {0, 255, 0};
 const Color BLUE = {0, 0, 255};
+
+
+struct Ray{
+    vec3<double> origin;
+    vec3<double> direction;
+};
 
 #endif //__UTILS_CRT
