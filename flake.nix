@@ -43,7 +43,10 @@
 
         inputsFrom = with pkgs; [ ];
 
-        shellHook = "";
+        shellHook = ''
+          make clean
+          bear -- make debug
+        '';
       };
 
       packages.x86_64-linux = {
