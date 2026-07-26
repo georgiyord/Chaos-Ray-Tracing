@@ -29,8 +29,8 @@ class vec3 {
   T z_;
 
 public:
-  constexpr vec3<T>(T x, T y, T z) noexcept : x_(x), y_(y), z_(z) {}
-  constexpr vec3<T>() noexcept
+  constexpr vec3(T x, T y, T z) noexcept : x_(x), y_(y), z_(z) {}
+  constexpr vec3() noexcept
       : x_(static_cast<T>(0)), y_(static_cast<T>(0)), z_(static_cast<T>(0)) {}
 
   [[nodiscard]] constexpr T x() const noexcept { return x_; }
