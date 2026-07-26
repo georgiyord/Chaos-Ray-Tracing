@@ -7,6 +7,7 @@
 #include <limits>
 #include <memory>
 #include <stdexcept>
+#include <type_traits>
 
 using u64 = uint64_t;
 using u32 = uint32_t;
@@ -17,292 +18,391 @@ using i32 = int32_t;
 using i16 = int16_t;
 using i8 = int8_t;
 
-template <typename T> struct vec3 {
-  T x;
-  T y;
-  T z;
+template <typename T>
+concept Numeric = std::is_arithmetic_v<T>;
 
-  static constexpr vec3<T> zero() {
-    return {
-        .x = static_cast<T>(0), .y = static_cast<T>(0), .z = static_cast<T>(0)};
-  };
-
-  bool operator==(const vec3<T> &rhs) const {
-    return (x == rhs.x) && (y == rhs.y) && (z == rhs.z);
-  }
-
-  vec3<T> operator-(const vec3<T> &rhs) const {
-    return {x - rhs.x, y - rhs.y, z - rhs.z};
-  }
-
-  vec3<T> operator+(const vec3<T> &rhs) const {
-    return {x + rhs.x, y + rhs.y, z + rhs.z};
-  }
-
-  T length() {
-    return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2));
-  }
-
-  vec3<T> &normalise() {
-    double _length = length();
-    if (_length != 0) {
-      x /= _length;
-      y /= _length;
-      z /= _length;
-    }
-    return *this;
-  }
-
-  friend vec3<T> crossProduct(const vec3<T> &a, const vec3<T> &b) {
-    return vec3<T>{.x = a.y * b.z - a.z * b.y,
-                   .y = a.z * b.x - a.x * b.z,
-                   .z = a.x * b.y - a.y * b.x};
-  }
-
-  friend T dotProduct(const vec3<T> &a, const vec3<T> &b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-  }
-
-  template <typename K> vec3<T> operator*(K scalar) {
-    return vec3<T>{
-        .x = this->x * scalar, .y = this->y * scalar, .z = this->z * scalar};
-  }
-
-  template <typename K>
-  friend vec3<T> operator*(const K scalar, const vec3<T> vec) {
-    return vec3<T>{
-        .x = vec.x * scalar, .y = vec.y * scalar, .z = vec.z * scalar};
-  }
-
-  template <typename K>
-  friend vec3<T> operator*(const vec3<T> vec, const K scalar) {
-    return vec3<T>{
-        .x = vec.x * scalar, .y = vec.y * scalar, .z = vec.z * scalar};
-  }
-};
-
-template <typename T> struct vec2 {
-  T x;
-  T y;
-
-  constexpr vec2(T _x, T _y) : x(_x), y(_y) {}
-
-  constexpr vec2<T> operator/(const vec2<T> &rhs) const {
-    return vec2<T>(x / rhs.x, y / rhs.y);
-  }
-
-  constexpr vec2<T> operator/(size_t rhs) const {
-    return vec2<T>(x / rhs, y / rhs);
-  }
-
-  bool operator==(const vec2 &rhs) const { return x == rhs.x && y == rhs.y; }
-
-  bool operator!=(const vec2 &rhs) const { return x != rhs.x || y != rhs.y; }
-};
-
-template <typename T> class Matrix {
-  size_t _rows;
-  size_t _cols;
-  std::unique_ptr<T[]> _arr;
+template <typename T>
+  requires Numeric<T>
+class vec3 {
+  T x_;
+  T y_;
+  T z_;
 
 public:
-  Matrix(const vec2<size_t> &size)
-      : _rows(size.x), _cols(size.y), _arr(new T[size.x * size.y]) {}
-  Matrix(const size_t rows, const size_t cols)
-      : _rows(rows), _cols(cols), _arr(new T[rows * cols]) {}
+  constexpr vec3<T>(T x, T y, T z) noexcept : x_(x), y_(y), z_(z) {}
+  constexpr vec3<T>() noexcept
+      : x_(static_cast<T>(0)), y_(static_cast<T>(0)), z_(static_cast<T>(0)) {}
 
-  Matrix(const Matrix &rhs)
-      : _rows(rhs._rows), _cols(rhs._cols), _arr(new T[_rows * _cols]) {
-    for (u32 i = 0; i < _rows * _cols; ++i) {
-      _arr[i] = rhs._arr[i];
+  [[nodiscard]] constexpr T x() const noexcept { return x_; }
+  [[nodiscard]] constexpr T y() const noexcept { return y_; }
+  [[nodiscard]] constexpr T z() const noexcept { return z_; }
+
+  [[nodiscard]] static constexpr vec3<T> zero() noexcept {
+    return vec3<T>(static_cast<T>(0), static_cast<T>(0), static_cast<T>(0));
+  };
+
+  [[nodiscard]] constexpr bool operator==(const vec3<T> &rhs) const noexcept {
+    return (x_ == rhs.x_) && (y_ == rhs.y_) && (z_ == rhs.z_);
+  }
+
+  [[nodiscard]] constexpr bool operator!=(const vec3<T> &rhs) const noexcept {
+    return (x_ != rhs.x_) || (y_ != rhs.y_) || (z_ == rhs.z_);
+  }
+
+  [[nodiscard]] constexpr vec3<T> operator-(const vec3<T> &rhs) const noexcept {
+    return vec3<T>(x_ - rhs.x_, y_ - rhs.y_, z_ - rhs.z_);
+  }
+
+  [[nodiscard]] constexpr vec3<T> operator+(const vec3<T> &rhs) const noexcept {
+    return vec3<T>(x_ + rhs.x_, y_ + rhs.y_, z_ + rhs.z_);
+  }
+
+  template <typename K>
+  [[nodiscard]] constexpr friend vec3<T>
+  operator*(const K scalar, const vec3<T> &vec) noexcept {
+    return vec3<T>(vec.x() * scalar, vec.y() * scalar, vec.z() * scalar);
+  }
+
+  template <typename K>
+  [[nodiscard]] constexpr friend vec3<T> operator*(const vec3<T> &vec,
+                                                   const K scalar) noexcept {
+    return vec3<T>(vec.x_ * scalar, vec.y_ * scalar, vec.z_ * scalar);
+  }
+
+  [[nodiscard]] constexpr vec3<T> operator/(const vec3<T> &rhs) const {
+    return vec3<T>(x_ / rhs.x_, y_ / rhs.y_, z_ / rhs.z_);
+  }
+
+  [[nodiscard]] constexpr vec3<T> operator/(size_t rhs) const {
+    return vec3<T>(x_ / rhs, y_ / rhs, z_ / rhs);
+  }
+
+  [[nodiscard]] constexpr T length() const noexcept {
+    return std::sqrt(x_ * x_ + y_ * y_ + z_ * z_);
+  }
+
+  constexpr vec3<T> &normalise() noexcept {
+    double _length = length();
+    if (_length != 0) {
+      x_ /= _length;
+      y_ /= _length;
+      z_ /= _length;
+    }
+    return *this;
+  }
+};
+
+template <typename T>
+  requires Numeric<T>
+class vec2 {
+  T x_;
+  T y_;
+
+public:
+  constexpr vec2(T x, T y) noexcept : x_(x), y_(y) {}
+
+  [[nodiscard]] constexpr T x() const noexcept { return x_; }
+  [[nodiscard]] constexpr T y() const noexcept { return y_; }
+
+  [[nodiscard]] static constexpr vec2<T> zero() noexcept {
+    return vec2<T>(static_cast<T>(0), static_cast<T>(0));
+  };
+
+  [[nodiscard]] bool operator==(const vec2 &rhs) const noexcept {
+    return x_ == rhs.x_ && y_ == rhs.y_;
+  }
+
+  [[nodiscard]] bool operator!=(const vec2 &rhs) const noexcept {
+    return x_ != rhs.x_ || y_ != rhs.y_;
+  }
+
+  [[nodiscard]] constexpr vec2<T> operator-(const vec2<T> &rhs) const noexcept {
+    return vec2<T>(x_ - rhs.x_, y_ - rhs.y_);
+  }
+
+  [[nodiscard]] constexpr vec2<T> operator+(const vec2<T> &rhs) const noexcept {
+    return vec2<T>(x_ + rhs.x_, y_ + rhs.y_);
+  }
+
+  template <typename K>
+  [[nodiscard]] constexpr friend vec2<T>
+  operator*(const K scalar, const vec2<T> &vec) noexcept {
+    return vec2<T>(vec.x_ * scalar, vec.y_ * scalar);
+  }
+
+  template <typename K>
+  [[nodiscard]] constexpr friend vec2<T> operator*(const vec2<T> &vec,
+                                                   const K scalar) noexcept {
+    return vec2<T>(vec.x_ * scalar, vec.y_ * scalar);
+  }
+
+  [[nodiscard]] constexpr vec2<T> operator/(const vec2<T> &rhs) const {
+    return vec2<T>(x_ / rhs.x_, y_ / rhs.y_);
+  }
+
+  [[nodiscard]] constexpr vec2<T> operator/(size_t rhs) const {
+    return vec2<T>(x_ / rhs, y_ / rhs);
+  }
+
+  [[nodiscard]] constexpr T length() const noexcept {
+    return std::sqrt(x_ * x_ + y_ * y_);
+  }
+
+  [[nodiscard]] constexpr vec3<T> &normalise() noexcept {
+    double _length = length();
+    if (_length != 0) {
+      x_ /= _length;
+      y_ /= _length;
+    }
+    return *this;
+  }
+};
+
+template <typename T>
+  requires Numeric<T>
+[[nodiscard]] constexpr vec3<T> crossProduct(const vec3<T> &a,
+                                             const vec3<T> &b) noexcept {
+  return vec3<T>(a.y() * b.z() - a.z() * b.y(), a.z() * b.x() - a.x() * b.z(),
+                 a.x() * b.y() - a.y() * b.x());
+}
+
+template <typename T>
+  requires Numeric<T>
+[[nodiscard]] constexpr T crossProduct(const vec2<T> &a,
+                                       const vec2<T> &b) noexcept {
+  return a.x() * b.y() - a.y() * b.x();
+}
+
+template <typename T>
+  requires Numeric<T>
+[[nodiscard]] constexpr T dotProduct(const vec3<T> &a,
+                                     const vec3<T> &b) noexcept {
+  return a.x() * b.x() + a.y() * b.y() + a.z() * b.z();
+}
+
+template <typename T>
+  requires Numeric<T>
+[[nodiscard]] constexpr T dotProduct(const vec2<T> &a,
+                                     const vec2<T> &b) noexcept {
+  return a.x() * b.x() + a.y() * b.y();
+}
+
+template <typename T> class Table {
+  size_t rows_;
+  size_t cols_;
+  std::unique_ptr<T[]> arr_;
+
+public:
+  constexpr Table(const vec2<size_t> &size)
+      : rows_(size.y()), cols_(size.x()), arr_(new T[size.x() * size.y()]) {}
+  constexpr Table(const size_t rows, const size_t cols)
+      : rows_(rows), cols_(cols), arr_(new T[rows * cols]) {}
+
+  constexpr Table(const Table &rhs)
+      : rows_(rhs.rows_), cols_(rhs.cols_), arr_(new T[rows_ * cols_]) {
+    for (u32 i = 0; i < rows_ * cols_; ++i) {
+      arr_[i] = rhs.arr_[i];
     }
   }
 
-  Matrix &operator=(const Matrix &rhs) {
+  constexpr Table &operator=(const Table &rhs) {
     if (this != &rhs) {
-      if (_rows != rhs._rows || _cols != rhs._cols) {
-        _rows = rhs._rows;
-        _cols = rhs._cols;
-        _arr = new T[_rows * _cols];
+      if (rows_ != rhs.rows_ || cols_ != rhs.cols_) {
+        rows_ = rhs.rows_;
+        cols_ = rhs.cols_;
+        arr_ = new T[rows_ * cols_];
       }
-      for (u32 i = 0; i < _rows * _cols; ++i) {
-        _arr[i] = rhs._arr[i];
+      for (u32 i = 0; i < rows_ * cols_; ++i) {
+        arr_[i] = rhs.arr_[i];
       }
     }
     return *this;
   }
 
-  [[nodiscard]] const T *begin() const { return _arr; }
+  [[nodiscard]] constexpr const T *begin() const noexcept { return arr_; }
 
-  [[nodiscard]] const T *end() const { return _arr + _rows * _cols; }
-
-  [[nodiscard]] T *begin() { return _arr; }
-
-  [[nodiscard]] T *end() { return _arr + _rows * _cols; }
-
-  [[nodiscard]] T get(const vec2<size_t> &pos) {
-    if (pos.x > _cols || pos.y > _rows) {
-      throw std::out_of_range("");
-    }
-    return _arr[(pos.y * _cols) + pos.x];
+  [[nodiscard]] constexpr const T *end() const noexcept {
+    return arr_ + rows_ * cols_;
   }
 
-  [[nodiscard]] T get(const size_t x, const size_t y) {
-    if (x > _cols || y > _rows) {
+  [[nodiscard]] constexpr T *begin() noexcept { return arr_; }
+
+  [[nodiscard]] constexpr T *end() noexcept { return arr_ + rows_ * cols_; }
+
+  [[nodiscard]] constexpr T get(const vec2<size_t> &pos) {
+    if (pos.x() > cols_ || pos.y() > rows_) {
       throw std::out_of_range("");
     }
-    return _arr[(y * _cols) + x];
+    return arr_[(pos.y() * cols_) + pos.x()];
   }
 
-  [[nodiscard]] const T &get(const vec2<size_t> &pos) const {
-    if (pos.x > _cols || pos.y > _rows) {
+  [[nodiscard]] constexpr T get(const size_t x, const size_t y) {
+    if (x > cols_ || y > rows_) {
       throw std::out_of_range("");
     }
-    return _arr[(pos.y * _cols) + pos.x];
+    return arr_[(y * cols_) + x];
   }
 
-  [[nodiscard]] const T &get(u32 x, u32 y) const {
-    if (x > _cols || y > _rows) {
+  [[nodiscard]] constexpr const T &get(const vec2<size_t> &pos) const {
+    if (pos.x() > cols_ || pos.y() > rows_) {
       throw std::out_of_range("");
     }
-    return _arr[(y * _cols) + x];
+    return arr_[(pos.y() * cols_) + pos.x()];
   }
 
-  [[nodiscard]] size_t getSize() const { return _cols * _rows; }
-  [[nodiscard]] vec2<size_t> getDimensions() const {
-    return vec2(_cols, _rows);
+  [[nodiscard]] constexpr const T &get(u32 x, u32 y) const {
+    if (x > cols_ || y > rows_) {
+      throw std::out_of_range("");
+    }
+    return arr_[(y * cols_) + x];
+  }
+
+  [[nodiscard]] constexpr size_t getSize() const noexcept {
+    return cols_ * rows_;
+  }
+  [[nodiscard]] constexpr vec2<size_t> getDimensions() const noexcept {
+    return vec2(cols_, rows_);
   }
 };
 
 using Color = vec3<u8>;
 
 namespace Colors {
-constexpr Color Black = Color{0, 0, 0};
-constexpr Color Red = Color{255, 0, 0};
-constexpr Color Green = Color{0, 255, 0};
-constexpr Color Blue = Color{0, 0, 255};
-constexpr Color Yellow = Color{255, 255, 0};
-constexpr Color Cyan = Color{0, 255, 255};
-constexpr Color Purple = Color{255, 0, 255};
-constexpr Color White = Color{255, 255, 255};
+constexpr Color Black = Color(0, 0, 0);
+constexpr Color Red = Color(255, 0, 0);
+constexpr Color Green = Color(0, 255, 0);
+constexpr Color Blue = Color(0, 0, 255);
+constexpr Color Yellow = Color(255, 255, 0);
+constexpr Color Cyan = Color(0, 255, 255);
+constexpr Color Purple = Color(255, 0, 255);
+constexpr Color White = Color(255, 255, 255);
 }; // namespace Colors
 
-enum class Anchor : u8 {
-  TOP_RIGHT,
-  TOP,
-  TOP_LEFT,
-  LEFT,
-  CENTER,
-  RIGHT,
-  BOTTOM_LEFT,
-  BOTTOM,
-  BOTTOM_RIGHT
-};
-
 class Shape {
-  vec2<u64> pos;
-  Anchor anchor;
+  vec2<double> pos_;
 
 protected:
-  Shape(vec2<u64> _pos) : pos(_pos), anchor(Anchor::CENTER) {}
-  Shape(vec2<u64> _pos, Anchor _anchor) : pos(_pos), anchor(_anchor) {}
+  constexpr Shape(const vec2<double> &pos) noexcept : pos_(pos) {}
+  constexpr Shape(double x, double y) noexcept : pos_(x, y) {}
 
 public:
-  [[nodiscard]] vec2<u64> getPosition() const { return pos; }
+  [[nodiscard]] constexpr vec2<double> position() const noexcept {
+    return pos_;
+  }
 };
 
 class Recht : public Shape {
-  vec2<size_t> size;
+  vec2<double> size_;
 
 public:
-  Recht(vec2<size_t> _size, vec2<u64> _pos) : Shape(_pos), size(_size) {}
+  constexpr Recht(const vec2<double> &size, const vec2<double> &pos) noexcept
+      : Shape(pos), size_(size) {}
+  constexpr Recht(const vec2<double> &size, double pos_x, double pos_y) noexcept
+      : Shape(pos_x, pos_y), size_(size) {}
+  constexpr Recht(double size_x, double size_y,
+                  const vec2<double> &pos) noexcept
+      : Shape(pos), size_(size_x, size_y) {}
+  constexpr Recht(double size_x, double size_y, double pos_x,
+                  double pos_y) noexcept
+      : Shape(pos_x, pos_y), size_(size_x, size_y) {}
 };
 
 class Circle : public Shape {
-  size_t radius;
+  double radius_;
 
 public:
-  Circle(size_t _radius, vec2<u64> _pos) : Shape(_pos), radius(_radius) {}
-  [[nodiscard]] size_t getRadius() const { return radius; }
+  constexpr Circle(double radius, const vec2<double> &pos) noexcept
+      : Shape(pos), radius_(radius) {}
+  constexpr Circle(double radius, double pos_x, double pos_y) noexcept
+      : Shape(pos_x, pos_y), radius_(radius) {}
+  [[nodiscard]] constexpr size_t radius() const noexcept { return radius_; }
 };
 
-const Color RED = {255, 0, 0};
-const Color GREEN = {0, 255, 0};
-const Color BLUE = {0, 0, 255};
-
 // Note: in right-hand rule coordinate system, triangles points are defined
-// clockwise
+// counter clockwise
 class Triangle {
-  using point = vec3<double>;
-  point point1;
-  point point2;
-  point point3;
-  mutable point normal;
+  using Point = vec3<double>;
+  Point point1_;
+  Point point2_;
+  Point point3_;
+  mutable Point normal_;
   mutable bool dirty;
 
 public:
-  Triangle(point p1, point p2, point p3)
-      : point1(p1), point2(p2), point3(p3), dirty(true) {}
-  Triangle()
-      : point1(point::zero()), point2(point::zero()), point3(point::zero()),
-        dirty(true) {}
-  point getNormal() const {
+  constexpr Triangle(Point point1, Point point2, Point point3) noexcept
+      : point1_(point1), point2_(point2), point3_(point3), dirty(true),
+        normal_(vec3<double>::zero()) {}
+  constexpr Triangle() noexcept
+      : point1_(Point::zero()), point2_(Point::zero()), point3_(Point::zero()),
+        dirty(true), normal_(vec3<double>::zero()) {}
+  [[nodiscard]] constexpr Point normal() const noexcept {
     if (dirty) {
-      const point vec1 = point2 - point1;
-      const point vec2 = point3 - point1;
-      normal = crossProduct(vec1, vec2).normalise();
+      const Point vec1 = point2_ - point1_;
+      const Point vec2 = point3_ - point1_;
+      normal_ = crossProduct(vec1, vec2).normalise();
       dirty = false;
     }
-    return normal;
+    return normal_;
   }
 
-  double getArea() const {
-    const point vec1 = point2 - point1;
-    const point vec2 = point3 - point1;
+  [[nodiscard]] double getArea() const noexcept {
+    const Point vec1 = point2_ - point1_;
+    const Point vec2 = point3_ - point1_;
     return crossProduct(vec1, vec2).length() / 2;
   }
 
-  point getPoint1() const { return point1; }
-  point getPoint2() const { return point2; }
-  point getPoint3() const { return point3; }
+  [[nodiscard]] constexpr Point point1() const noexcept { return point1_; }
+  [[nodiscard]] constexpr Point point2() const noexcept { return point2_; }
+  [[nodiscard]] constexpr Point point3() const noexcept { return point3_; }
 
-  void update(point p1, point p2, point p3) {
-    point1 = p1;
-    point2 = p2;
-    point3 = p3;
+  constexpr void update(Point p1, Point p2, Point p3) noexcept {
+    point1_ = p1;
+    point2_ = p2;
+    point3_ = p3;
     dirty = true;
   }
 };
 
-struct Ray {
-  vec3<double> origin;
-  vec3<double> direction;
+class Ray {
+  vec3<double> origin_;
+  vec3<double> direction_;
 
+public:
   // returns the distance from the ray origin to the intersection point, or NaN
   // if the ray doesn't intersect the triangle.
-  double intersects(const Triangle triangle) {
-    if (dotProduct(direction, triangle.getNormal()) >= 0) {
+  constexpr Ray(vec3<double> origin, vec3<double> direction) noexcept
+      : origin_(origin), direction_(direction) {}
+  constexpr Ray() noexcept
+      : origin_(vec3<double>::zero()), direction_(vec3<double>::zero()) {}
+
+  [[nodiscard]] constexpr vec3<double> origin() noexcept { return origin_; }
+  [[nodiscard]] constexpr vec3<double> direction() noexcept {
+    return direction_;
+  }
+
+  [[nodiscard]] constexpr double
+  intersects(const Triangle triangle) const noexcept {
+    if (dotProduct(direction_, triangle.normal()) >= 0) {
       return std::numeric_limits<double>::quiet_NaN();
     }
-    double tStep =
-        dotProduct(triangle.getPoint1() - origin, triangle.getNormal()) /
-        dotProduct(direction, triangle.getNormal());
-    vec3<double> pointPlaneIntersection = origin + tStep * direction;
+    double tStep = dotProduct(triangle.point1() - origin_, triangle.normal()) /
+                   dotProduct(direction_, triangle.normal());
+    vec3<double> pointPlaneIntersection = origin_ + tStep * direction_;
 
-    if (dotProduct(
-            triangle.getNormal(),
-            crossProduct(triangle.getPoint2() - triangle.getPoint1(),
-                         pointPlaneIntersection - triangle.getPoint1())) < 0)
+    if (dotProduct(triangle.normal(),
+                   crossProduct(triangle.point2() - triangle.point1(),
+                                pointPlaneIntersection - triangle.point1())) <
+        0)
       return std::numeric_limits<double>::quiet_NaN();
-    if (dotProduct(
-            triangle.getNormal(),
-            crossProduct(triangle.getPoint3() - triangle.getPoint2(),
-                         pointPlaneIntersection - triangle.getPoint2())) < 0)
+    if (dotProduct(triangle.normal(),
+                   crossProduct(triangle.point3() - triangle.point2(),
+                                pointPlaneIntersection - triangle.point2())) <
+        0)
       return std::numeric_limits<double>::quiet_NaN();
-    if (dotProduct(
-            triangle.getNormal(),
-            crossProduct(triangle.getPoint1() - triangle.getPoint3(),
-                         pointPlaneIntersection - triangle.getPoint3())) < 0)
+    if (dotProduct(triangle.normal(),
+                   crossProduct(triangle.point1() - triangle.point3(),
+                                pointPlaneIntersection - triangle.point3())) <
+        0)
       return std::numeric_limits<double>::quiet_NaN();
 
     return tStep;

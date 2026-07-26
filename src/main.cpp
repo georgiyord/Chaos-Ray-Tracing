@@ -36,19 +36,13 @@ inline void createRechtsImage(const vec2<size_t> resolution) {
   struct ColoredRecht : Recht {
     std::vector<Color> colors;
 
-    ColoredRecht(vec2<size_t> size) : Recht(size, {0, 0}) {
-      colors.push_back(Color{
-          .x = randColor(randEngine),
-          .y = randColor(randEngine),
-          .z = randColor(randEngine),
-      });
+    ColoredRecht(vec2<double> size) : Recht(size, {0, 0}) {
+      colors.push_back(Color(randColor(randEngine), randColor(randEngine),
+                             randColor(randEngine)));
       bool newColor = true;
       while (newColor) {
-        colors.push_back(Color{
-            .x = randColor(randEngine),
-            .y = randColor(randEngine),
-            .z = randColor(randEngine),
-        });
+        colors.push_back(Color(randColor(randEngine), randColor(randEngine),
+                               randColor(randEngine)));
         newColor = randBool(randEngine);
       }
     }
@@ -57,23 +51,26 @@ inline void createRechtsImage(const vec2<size_t> resolution) {
   std::vector<ColoredRecht> rechts;
   rechts.reserve(ROWS * COLS);
   for (u32 i = 0; i < ROWS * COLS; ++i) {
-    rechts.emplace_back(resolution / rechtsAmount);
+    rechts.emplace_back(
+        vec2<double>((double)resolution.x() / rechtsAmount.x(),
+                     (double)resolution.y() / rechtsAmount.y()));
   }
 
   std::ofstream image("imageRechts.ppm", std::ios::trunc | std::ios::out);
-  image << "P3 " << resolution.x << " " << resolution.y << " " << 255 << " ";
+  image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
+        << " ";
 
-  for (size_t y = 0; y < resolution.y; ++y) {
-    for (size_t x = 0; x < resolution.x; ++x) {
-      const size_t recht_x = x * ROWS / resolution.x;
-      const size_t recht_y = y * COLS / resolution.y;
+  for (size_t y = 0; y < resolution.y(); ++y) {
+    for (size_t x = 0; x < resolution.x(); ++x) {
+      const size_t recht_x = x * ROWS / resolution.x();
+      const size_t recht_y = y * COLS / resolution.y();
       const ColoredRecht &recht = rechts.at(recht_y * ROWS + recht_x);
 
       auto weights = generateWeights(recht.colors);
       std::discrete_distribution<> d(weights.begin(), weights.end());
       Color c = recht.colors[d(randEngine)];
-      image << static_cast<u32>(c.x) << " " << static_cast<u32>(c.y) << " "
-            << static_cast<u32>(c.z) << " ";
+      image << static_cast<u32>(c.x()) << " " << static_cast<u32>(c.y()) << " "
+            << static_cast<u32>(c.z()) << " ";
     }
   }
   image.close();
@@ -82,21 +79,22 @@ inline void createRechtsImage(const vec2<size_t> resolution) {
 // Homework 2 part 2
 void createShapeAccent(const vec2<size_t> resolution) {
   constexpr size_t radius = 300;
-  Circle circle(radius, resolution / 2);
+  Circle circle(radius, (double)resolution.x() / 2, (double)resolution.y() / 2);
 
   std::ofstream image("imageShapeAccent.ppm", std::ios::trunc | std::ios::out);
-  image << "P3 " << resolution.x << " " << resolution.y << " " << 255 << " ";
+  image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
+        << " ";
 
-  for (size_t y = 0; y < resolution.y; ++y) {
-    for (size_t x = 0; x < resolution.x; ++x) {
-      const size_t relative_x = x > circle.getPosition().x
-                                    ? x - circle.getPosition().x
-                                    : circle.getPosition().x - x;
-      const size_t relative_y = y > circle.getPosition().y
-                                    ? y - circle.getPosition().y
-                                    : circle.getPosition().y - y;
+  for (size_t y = 0; y < resolution.y(); ++y) {
+    for (size_t x = 0; x < resolution.x(); ++x) {
+      const size_t relative_x = x > circle.position().x()
+                                    ? x - circle.position().x()
+                                    : circle.position().x() - x;
+      const size_t relative_y = y > circle.position().y()
+                                    ? y - circle.position().y()
+                                    : circle.position().y() - y;
       if ((relative_x * relative_x) + (relative_y * relative_y) >
-          circle.getRadius() * circle.getRadius()) {
+          circle.radius() * circle.radius()) {
         image << 128 << " " << 128 << " " << 128 << " ";
       } else {
         image << 0 << " " << 128 << " " << 0 << " ";
@@ -106,29 +104,28 @@ void createShapeAccent(const vec2<size_t> resolution) {
 }
 
 // Homework 3
-Matrix<Ray> rayGeneration(const vec2<size_t> resolution) {
-  Matrix<Ray> raster(resolution);
+Table<Ray> rayGeneration(const vec2<size_t> resolution) {
+  Table<Ray> raster(resolution);
 
-  for (size_t y = 0; y < resolution.y; ++y) {
-    for (size_t x = 0; x < resolution.x; ++x) {
+  for (size_t y = 0; y < resolution.y(); ++y) {
+    for (size_t x = 0; x < resolution.x(); ++x) {
       // get the center of the pixel;
       double world_x = x + .5;
       double world_y = y + .5;
 
       // convert to Normalised Device Coordinate space
-      world_x /= resolution.x;
-      world_y /= resolution.y;
+      world_x /= resolution.x();
+      world_y /= resolution.y();
 
       // convert to Screen space
       world_x = world_x * 2 - 1;
       world_y = 1 - world_y * 2;
 
       // align to aspect ratio
-      world_x *= double(resolution.x) / resolution.y;
+      world_x *= double(resolution.x()) / resolution.y();
       vec3<double> direction({world_x, world_y, -1.0});
       direction.normalise();
-      raster.get(x, y) =
-          Ray({.origin = vec3<double>{.0, .0, .0}, .direction = direction});
+      raster.get(x, y) = Ray(vec3<double>::zero(), direction);
     }
   }
   return raster;
@@ -139,14 +136,15 @@ void createImageFromRayDirections(const vec2<size_t> resolution) {
   auto rays = rayGeneration(resolution);
 
   std::ofstream image("RayDirection.ppm", std::ios::trunc | std::ios::out);
-  image << "P3 " << resolution.x << " " << resolution.y << " " << 255 << " ";
-  for (size_t y = 0; y < resolution.y; ++y) {
-    for (size_t x = 0; x < resolution.x; ++x) {
-      Color c{.x = static_cast<u8>(std::abs(rays.get(x, y).direction.x) * 255),
-              .y = static_cast<u8>(std::abs(rays.get(x, y).direction.y) * 255),
-              .z = static_cast<u8>(rays.get(x, y).direction.z * -255)};
-      image << static_cast<u32>(c.x) << " " << static_cast<u32>(c.y) << " "
-            << static_cast<u32>(c.z) << " ";
+  image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
+        << " ";
+  for (size_t y = 0; y < resolution.y(); ++y) {
+    for (size_t x = 0; x < resolution.x(); ++x) {
+      Color c{static_cast<u8>(std::abs(rays.get(x, y).direction().x()) * 255),
+              static_cast<u8>(std::abs(rays.get(x, y).direction().y()) * 255),
+              static_cast<u8>(rays.get(x, y).direction().z() * -255)};
+      image << static_cast<u32>(c.x()) << " " << static_cast<u32>(c.y()) << " "
+            << static_cast<u32>(c.z()) << " ";
     }
   }
 }
@@ -158,33 +156,24 @@ void crossProductTests() {
   // Task 2
   {
     storageVectors.push_back(
-        crossProduct(vec3<double>{.x = 3.5, .y = .0, .z = .0},
-                     vec3<double>{.x = 1.75, .y = 3.5, .z = .0}));
+        crossProduct(vec3<double>(3.5, .0, .0), vec3<double>(1.75, 3.5, .0)));
     storageVectors.push_back(
-        crossProduct(vec3<double>{.x = 3, .y = -3, .z = 1},
-                     vec3<double>{.x = 4, .y = 9, .z = 3}));
-    storageScalars.push_back(crossProduct(vec3<double>{.x = 3, .y = -3, .z = 1},
-                                          vec3<double>{.x = 4, .y = 9, .z = 3})
-                                 .length());
+        crossProduct(vec3<double>(3, -3, 1), vec3<double>(4, 9, 3)));
     storageScalars.push_back(
-        crossProduct(vec3<double>{.x = 3, .y = -3, .z = 1},
-                     vec3<double>{.x = -12, .y = 12, .z = -4})
+        crossProduct(vec3<double>(3, -3, 1), vec3<double>(4, 9, 3)).length());
+    storageScalars.push_back(
+        crossProduct(vec3<double>(3, -3, 1), vec3<double>(-12, 12, -4))
             .length());
   }
   // Task 3
   {
-    Triangle t1({.x = -1.75, .y = -1.75, .z = -3},
-                {.x = 1.75, .y = -1.75, .z = -3},
-                {.x = -0, .y = 1.75, .z = -3});
-    Triangle t2{{.x = 0, .y = 0, .z = -1},
-                {.x = 1, .y = 0, .z = 1},
-                {.x = -1, .y = 0, .z = 1}};
-    Triangle t3{{.x = 0.56, .y = 1.11, .z = 1.23},
-                {.x = 0.44, .y = -2.368, .z = -0.54},
-                {.x = -1.56, .y = 0.15, .z = -1.92}};
-    storageVectors.push_back(t1.getNormal());
-    storageVectors.push_back(t2.getNormal());
-    storageVectors.push_back(t3.getNormal());
+    Triangle t1{{-1.75, -1.75, -3}, {1.75, -1.75, -3}, {-0, 1.75, -3}};
+    Triangle t2{{0, 0, -1}, {1, 0, 1}, {-1, 0, 1}};
+    Triangle t3{
+        {0.56, 1.11, 1.23}, {0.44, -2.368, -0.54}, {-1.56, 0.15, -1.92}};
+    storageVectors.push_back(t1.normal());
+    storageVectors.push_back(t2.normal());
+    storageVectors.push_back(t3.normal());
 
     storageScalars.push_back(t1.getArea());
     storageScalars.push_back(t2.getArea());
@@ -196,60 +185,55 @@ void crossProductTests() {
 void createTriangleImages(const vec2<size_t> resolution) {
   {
     // TASK 1
-    Triangle triangle{{.x = -1.75, .y = -1.75, .z = -3},
-                      {.x = 1.75, .y = -1.75, .z = -3},
-                      {.x = 0, .y = 1.75, .z = -3}};
+    Triangle triangle{{-1.75, -1.75, -3}, {1.75, -1.75, -3}, {0, 1.75, -3}};
     auto rays = rayGeneration(resolution);
 
     std::ofstream image("RayTriangleIntersection1.ppm",
                         std::ios::trunc | std::ios::out);
-    image << "P3 " << resolution.x << " " << resolution.y << " " << 255 << " ";
-    for (size_t y = 0; y < resolution.y; ++y) {
-      for (size_t x = 0; x < resolution.x; ++x) {
+    image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
+          << " ";
+    for (size_t y = 0; y < resolution.y(); ++y) {
+      for (size_t x = 0; x < resolution.x(); ++x) {
         Color c = !std::isnan(rays.get(x, y).intersects(triangle))
                       ? Colors::Green
                       : Colors::Black;
-        image << static_cast<u32>(c.x) << " " << static_cast<u32>(c.y) << " "
-              << static_cast<u32>(c.z) << " ";
+        image << static_cast<u32>(c.x()) << " " << static_cast<u32>(c.y())
+              << " " << static_cast<u32>(c.z()) << " ";
       }
     }
   }
   {
     // TASK 2
-    Triangle triangle{{.x = -3, .y = 0, .z = -2},
-                      {.x = 5, .y = 0, .z = -3},
-                      {.x = 1, .y = 3, .z = -4}};
+    Triangle triangle{{-3, 0, -2}, {5, 0, -3}, {1, 3, -4}};
     auto rays = rayGeneration(resolution);
 
     std::ofstream image("RayTriangleIntersection2.ppm",
                         std::ios::trunc | std::ios::out);
-    image << "P3 " << resolution.x << " " << resolution.y << " " << 255 << " ";
-    for (size_t y = 0; y < resolution.y; ++y) {
-      for (size_t x = 0; x < resolution.x; ++x) {
+    image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
+          << " ";
+    for (size_t y = 0; y < resolution.y(); ++y) {
+      for (size_t x = 0; x < resolution.x(); ++x) {
         Color c = !std::isnan(rays.get(x, y).intersects(triangle))
                       ? Colors::Red
                       : Colors::Black;
-        image << static_cast<u32>(c.x) << " " << static_cast<u32>(c.y) << " "
-              << static_cast<u32>(c.z) << " ";
+        image << static_cast<u32>(c.x()) << " " << static_cast<u32>(c.y())
+              << " " << static_cast<u32>(c.z()) << " ";
       }
     }
   }
   {
     // TASK 3
     // Make triangles intersect for the fun of it
-    Triangle triangle1{{.x = -1.75, .y = -1.75, .z = -3},
-                       {.x = 1.75, .y = -1.75, .z = -3},
-                       {.x = 0, .y = 1.75, .z = -3}};
-    Triangle triangle2{{.x = -3, .y = 0, .z = -2},
-                       {.x = 5, .y = 0, .z = -3},
-                       {.x = 1, .y = 3, .z = -4}};
+    Triangle triangle1{{-1.75, -1.75, -3}, {1.75, -1.75, -3}, {0, 1.75, -3}};
+    Triangle triangle2{{-3, 0, -2}, {5, 0, -3}, {1, 3, -4}};
     auto rays = rayGeneration(resolution);
 
     std::ofstream image("RayTriangleIntersection3.ppm",
                         std::ios::trunc | std::ios::out);
-    image << "P3 " << resolution.x << " " << resolution.y << " " << 255 << " ";
-    for (size_t y = 0; y < resolution.y; ++y) {
-      for (size_t x = 0; x < resolution.x; ++x) {
+    image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
+          << " ";
+    for (size_t y = 0; y < resolution.y(); ++y) {
+      for (size_t x = 0; x < resolution.x(); ++x) {
         Color c = Colors::Black;
         auto distance1 = rays.get(x, y).intersects(triangle1);
         auto distance2 = rays.get(x, y).intersects(triangle2);
@@ -270,8 +254,8 @@ void createTriangleImages(const vec2<size_t> resolution) {
               (1 - (distance2 /
                     6)); // try to represent distance with brightness value
         }
-        image << static_cast<u32>(c.x) << " " << static_cast<u32>(c.y) << " "
-              << static_cast<u32>(c.z) << " ";
+        image << static_cast<u32>(c.x()) << " " << static_cast<u32>(c.y())
+              << " " << static_cast<u32>(c.z()) << " ";
       }
     }
   }
@@ -283,19 +267,15 @@ void createTriangleImages(const vec2<size_t> resolution) {
     double r3 = 2;
     double r4 = 4;
     vec3<double> points[4][16];
-    vec3<double> center = {.x = 0, .y = 0, .z = -3};
+    vec3<double> center = {0, 0, -3};
 
     // calculate point coordinates on circles
     for (size_t i = 0; i < 16; ++i) {
       double theta = 2 * std::numbers::pi / 16 * i;
-      points[0][i] = {
-          .x = r1 * std::cos(theta), .y = r1 * std::sin(theta), .z = -3};
-      points[1][i] = {
-          .x = r2 * std::cos(theta), .y = r2 * std::sin(theta), .z = -3};
-      points[2][i] = {
-          .x = r3 * std::cos(theta), .y = r3 * std::sin(theta), .z = -3};
-      points[3][i] = {
-          .x = r4 * std::cos(theta), .y = r4 * std::sin(theta), .z = -3};
+      points[0][i] = {r1 * std::cos(theta), r1 * std::sin(theta), -3};
+      points[1][i] = {r2 * std::cos(theta), r2 * std::sin(theta), -3};
+      points[2][i] = {r3 * std::cos(theta), r3 * std::sin(theta), -3};
+      points[3][i] = {r4 * std::cos(theta), r4 * std::sin(theta), -3};
     }
 
     Triangle innerTriangles[16];
@@ -338,9 +318,10 @@ void createTriangleImages(const vec2<size_t> resolution) {
 
     std::ofstream image("RayTriangleIntersection4.ppm",
                         std::ios::trunc | std::ios::out);
-    image << "P3 " << resolution.x << " " << resolution.y << " " << 255 << " ";
-    for (size_t y = 0; y < resolution.y; ++y) {
-      for (size_t x = 0; x < resolution.x; ++x) {
+    image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
+          << " ";
+    for (size_t y = 0; y < resolution.y(); ++y) {
+      for (size_t x = 0; x < resolution.x(); ++x) {
         Color c = Colors::Black;
         {
           double distance = std::numeric_limits<double>::infinity();
@@ -372,8 +353,8 @@ void createTriangleImages(const vec2<size_t> resolution) {
             }
           }
         }
-        image << static_cast<u32>(c.x) << " " << static_cast<u32>(c.y) << " "
-              << static_cast<u32>(c.z) << " ";
+        image << static_cast<u32>(c.x()) << " " << static_cast<u32>(c.y())
+              << " " << static_cast<u32>(c.z()) << " ";
       }
     }
   }
