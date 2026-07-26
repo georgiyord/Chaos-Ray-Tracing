@@ -87,8 +87,6 @@ template <typename T> struct vec2 {
 
   constexpr vec2(T _x, T _y) : x(_x), y(_y) {}
 
-  [[nodiscard]] constexpr T volume() const { return x * y; }
-
   constexpr vec2<T> operator/(const vec2<T> &rhs) const {
     return vec2<T>(x / rhs.x, y / rhs.y);
   }
@@ -103,68 +101,77 @@ template <typename T> struct vec2 {
 };
 
 template <typename T> class Matrix {
-  vec2<size_t> size;
-  std::unique_ptr<T[]> arr;
+  size_t _rows;
+  size_t _cols;
+  std::unique_ptr<T[]> _arr;
 
 public:
-  Matrix(vec2<size_t> _size) : size(_size), arr(new T[size.volume()]) {}
+  Matrix(const vec2<size_t> &size)
+      : _rows(size.x), _cols(size.y), _arr(new T[size.x * size.y]) {}
+  Matrix(const size_t rows, const size_t cols)
+      : _rows(rows), _cols(cols), _arr(new T[rows * cols]) {}
 
-  Matrix(const Matrix &rhs) : size(rhs.size), arr(new T[size.volume()]) {
-    for (u32 i = 0; i < size.volume(); ++i) {
-      arr[i] = rhs.arr[i];
+  Matrix(const Matrix &rhs)
+      : _rows(rhs._rows), _cols(rhs._cols), _arr(new T[_rows * _cols]) {
+    for (u32 i = 0; i < _rows * _cols; ++i) {
+      _arr[i] = rhs._arr[i];
     }
   }
 
   Matrix &operator=(const Matrix &rhs) {
     if (this != &rhs) {
-      if (size != rhs.size) {
-        size = rhs.size;
-        arr = new T[size.volume()];
+      if (_rows != rhs._rows || _cols != rhs._cols) {
+        _rows = rhs._rows;
+        _cols = rhs._cols;
+        _arr = new T[_rows * _cols];
       }
-      for (u32 i = 0; i < size.volume(); ++i) {
-        arr[i] = rhs.arr[i];
+      for (u32 i = 0; i < _rows * _cols; ++i) {
+        _arr[i] = rhs._arr[i];
       }
     }
     return *this;
   }
 
-  [[nodiscard]] const T *begin() const { return arr; }
+  [[nodiscard]] const T *begin() const { return _arr; }
 
-  [[nodiscard]] const T *end() const { return arr + size.volume(); }
+  [[nodiscard]] const T *end() const { return _arr + _rows * _cols; }
 
-  [[nodiscard]] T *begin() { return arr; }
+  [[nodiscard]] T *begin() { return _arr; }
 
-  [[nodiscard]] T *end() { return arr + size.volume(); }
+  [[nodiscard]] T *end() { return _arr + _rows * _cols; }
 
-  T &get(const vec2<u32> pos) {
-    if (pos.x >= size.x || pos.y >= size.y) {
+  [[nodiscard]] T get(const vec2<size_t> &pos) {
+    if (pos.x > _cols || pos.y > _rows) {
       throw std::out_of_range("");
     }
-    return arr[(pos.y * size.x) + pos.x];
+    return _arr[(pos.y * _cols) + pos.x];
   }
 
-  T &get(u32 x, u32 y) {
-    if (x >= size.x || y >= size.y) {
+  [[nodiscard]] T get(const size_t x, const size_t y) {
+    if (x > _cols || y > _rows) {
       throw std::out_of_range("");
     }
-    return arr[(y * size.x) + x];
+    return _arr[(y * _cols) + x];
   }
 
-  [[nodiscard]] const T &get(const vec2<u32> pos) const {
-    if (pos.x >= size.x || pos.y >= size.y) {
+  [[nodiscard]] const T &get(const vec2<size_t> &pos) const {
+    if (pos.x > _cols || pos.y > _rows) {
       throw std::out_of_range("");
     }
-    return arr[(pos.y * size.x) + pos.x];
+    return _arr[(pos.y * _cols) + pos.x];
   }
 
   [[nodiscard]] const T &get(u32 x, u32 y) const {
-    if (x >= size.x || y >= size.y) {
+    if (x > _cols || y > _rows) {
       throw std::out_of_range("");
     }
-    return arr[(y * size.x) + x];
+    return _arr[(y * _cols) + x];
   }
 
-  [[nodiscard]] vec2<size_t> getSize() const { return size; }
+  [[nodiscard]] size_t getSize() const { return _cols * _rows; }
+  [[nodiscard]] vec2<size_t> getDimensions() const {
+    return vec2(_cols, _rows);
+  }
 };
 
 using Color = vec3<u8>;
