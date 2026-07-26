@@ -46,7 +46,7 @@ public:
   }
 
   [[nodiscard]] constexpr bool operator!=(const vec3<T> &rhs) const noexcept {
-    return (x_ != rhs.x_) || (y_ != rhs.y_) || (z_ == rhs.z_);
+    return (x_ != rhs.x_) || (y_ != rhs.y_) || (z_ != rhs.z_);
   }
 
   [[nodiscard]] constexpr vec3<T> operator-(const vec3<T> &rhs) const noexcept {
