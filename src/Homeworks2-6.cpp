@@ -1,3 +1,6 @@
+// This file was used for homeworks CRT02 to CRT06 inclusively.
+// Visit CurrentHomeworks.cpp for the next ones.
+
 #include <utils.hpp>
 #include <cerrno>
 #include <cmath>
@@ -490,7 +493,7 @@ void cameraMovements(const vec2<size_t> resolution) {
                               resolution, tri);
     }
   }
-}
+} 
 
 int main(const int argc, const char **argv) {
   if (argc < 3) {

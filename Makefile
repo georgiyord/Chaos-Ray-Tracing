@@ -4,11 +4,11 @@ __NO_TARGET:
 debug: ./build/Debug/crt_debug
 release: ./build/Release/crt_release
 
-./build/Debug/crt_debug: src/main.cpp include/utils.hpp build/Debug
-	g++ -std=c++23 -g -O0 -fsanitize=address,undefined -fno-omit-frame-pointer -I./include/ src/main.cpp -o ./build/Debug/crt_debug
+./build/Debug/crt_debug: src/CurrentHomeworks.cpp include/utils.hpp build/Debug
+	g++ -std=c++23 -g -O0 -fsanitize=address,undefined -fno-omit-frame-pointer -I./include/ src/CurrentHomeworks.cpp -o ./build/Debug/crt_debug
 
-./build/Release/crt_release: src/main.cpp include/utils.hpp build/Release
-	g++ -std=c++23 -g -O3 -I./include/ -fno-omit-frame-pointer src/main.cpp -o ./build/Release/crt_release
+./build/Release/crt_release: src/CurrentHomeworks.cpp include/utils.hpp build/Release
+	g++ -std=c++23 -g -O3 -I./include/ -fno-omit-frame-pointer src/CurrentHomeworks.cpp -o ./build/Release/crt_release
 
 build/Debug:
 	mkdir -p build/Debug

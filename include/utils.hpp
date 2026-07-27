@@ -4,13 +4,21 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <iomanip>
+#include <ios>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <ostream>
+#include <rapidjson/document.h>
+#include <rapidjson/filereadstream.h>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 using u64 = uint64_t;
 using u32 = uint32_t;
@@ -514,7 +522,7 @@ public:
   }
 
   [[nodiscard]] constexpr double
-  intersects(const Triangle triangle) const noexcept {
+  intersects(const Triangle &triangle) const noexcept {
     const auto rayStep = dotProduct(direction_, triangle.normal());
     const auto planeDistance =
         dotProduct(triangle.point1() - origin_, triangle.normal());
@@ -541,6 +549,86 @@ public:
       return std::numeric_limits<double>::quiet_NaN();
 
     return tSteps;
+  }
+  [[nodiscard]] constexpr double
+  intersects(const Triangle &triangle,
+             const vec3<double> &normal) const noexcept {
+    const auto rayStep = dotProduct(direction_, normal);
+    const auto planeDistance = dotProduct(triangle.point1() - origin_, normal);
+    if (rayStep >= 0) {
+      return std::numeric_limits<double>::quiet_NaN();
+    }
+    double tSteps = planeDistance / rayStep;
+    vec3<double> pointPlaneIntersection = origin_ + tSteps * direction_;
+
+    if (dotProduct(normal, crossProduct(triangle.point2() - triangle.point1(),
+                                        pointPlaneIntersection -
+                                            triangle.point1())) < 0)
+      return std::numeric_limits<double>::quiet_NaN();
+    if (dotProduct(normal, crossProduct(triangle.point3() - triangle.point2(),
+                                        pointPlaneIntersection -
+                                            triangle.point2())) < 0)
+      return std::numeric_limits<double>::quiet_NaN();
+    if (dotProduct(normal, crossProduct(triangle.point1() - triangle.point3(),
+                                        pointPlaneIntersection -
+                                            triangle.point3())) < 0)
+      return std::numeric_limits<double>::quiet_NaN();
+
+    return tSteps;
+  }
+};
+
+class Mesh {
+public:
+  class ConstTriangleIterator {
+    const Mesh *parent_;
+    std::vector<vec3<size_t>>::const_iterator itr_;
+
+  public:
+    ConstTriangleIterator(const Mesh &parent,
+                          std::vector<vec3<size_t>>::const_iterator itr)
+        : parent_(&parent), itr_(itr) {}
+    [[nodiscard]] const Triangle operator*() const noexcept {
+      return parent_->getTriangle(*itr_);
+    }
+    ConstTriangleIterator &operator++() noexcept {
+      ++itr_;
+      return *this;
+    }
+    bool operator!=(const ConstTriangleIterator &rhs) const noexcept {
+      return itr_ != rhs.itr_;
+    }
+  };
+
+private:
+  std::vector<vec3<double>> vertices_;
+  std::vector<vec3<size_t>> indicies_;
+  std::vector<vec3<double>>
+      normals_; // cache normals so they don't get calculated for each pixel
+                // while rendering
+
+public:
+  Mesh(std::vector<vec3<double>> &&verticies,
+       std::vector<vec3<size_t>> indicies)
+      : vertices_{std::move(verticies)}, indicies_{std::move(indicies)} {
+    for (auto vertexIndicies : indicies_) {
+      normals_.emplace_back(getTriangle(vertexIndicies).normal());
+    }
+  }
+  ConstTriangleIterator begin() const noexcept {
+    return ConstTriangleIterator{*this, indicies_.cbegin()};
+  }
+  ConstTriangleIterator end() const noexcept {
+    return ConstTriangleIterator{*this, indicies_.cend()};
+  }
+  [[nodiscard]] const auto &indicies() const noexcept { return indicies_; }
+  [[nodiscard]] const auto &vertices() const noexcept { return vertices_; }
+  [[nodiscard]] const auto &normals() const noexcept { return normals_; }
+
+  [[nodiscard]] Triangle
+  getTriangle(const vec3<size_t> &indicies) const noexcept {
+    return Triangle{vertices_[indicies.x()], vertices_[indicies.y()],
+                    vertices_[indicies.z()]};
   }
 };
 
@@ -657,9 +745,173 @@ public:
       }
     }
   }
+  void takeSnapshot(const std::string &fileName, const vec2<size_t> &resolution,
+                    const std::vector<Mesh> &meshes,
+                    const vec3<double> &backgroundColor) const {
+    std::ofstream image(fileName, std::ios::trunc | std::ios::out);
+    image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
+          << " ";
+
+    // TODO: research if SIMD can be used here and how to nudge the compiler
+    for (size_t y = 0; y < resolution.y(); ++y) {
+      for (size_t x = 0; x < resolution.x(); ++x) {
+        // get the center of the pixel;
+        double world_x = x + .5;
+        double world_y = y + .5;
+
+        // convert to Normalised Device Coordinate space
+        world_x /= resolution.x();
+        world_y /= resolution.y();
+
+        // convert to Screen space
+        world_x = world_x * 2 - 1;
+        world_y = 1 - world_y * 2;
+
+        // align to aspect ratio
+        world_x *= double(resolution.x()) / resolution.y();
+        vec3<double> direction({world_x, world_y, -1.0});
+        direction.normalise();
+        direction = direction * orientation_;
+        Ray ray{position_, direction};
+        double steps = std::numeric_limits<double>::infinity();
+        // Triangle closesHitTriangle;
+        for (auto &mesh : meshes) {
+          for (size_t i = 0; i < mesh.indicies().size(); ++i) {
+            // auto hit = 1;
+            // std::cout << "Hello Triangle " << hit++ << '\n' << std::flush;
+            const auto stepsTmp = ray.intersects(
+                mesh.getTriangle(mesh.indicies()[i]), mesh.normals()[i]);
+            if (std::isnan(stepsTmp))
+              continue;
+            if (stepsTmp < steps) {
+              steps = stepsTmp;
+              // closesHitTriangle = triangle;
+            }
+          }
+        }
+        if (steps != std::numeric_limits<double>::infinity()) {
+          const auto hitPoint = ray.origin() + steps * ray.direction();
+          image << 255 << " " << 255 << " " << 255 << " ";
+        } else {
+          image << static_cast<u32>(backgroundColor.x() * 255) << " "
+                << static_cast<u32>(backgroundColor.y() * 255) << " "
+                << static_cast<u32>(backgroundColor.z() * 255) << " ";
+        }
+      }
+    }
+  }
   constexpr void reset() noexcept {
     position_ = vec3<double>::zero();
     orientation_ = Matrix3x3<double>::one();
+  }
+};
+
+class Scene {
+  class Settings {
+    vec3<double> backgroundColor_;
+    struct ImageSettings {
+      u32 width;
+      u32 height;
+    } imageSettings_;
+
+  public:
+    Settings(vec3<double> backgroundColor, size_t imageWidth,
+             size_t imageHeight)
+        : backgroundColor_{backgroundColor},
+          imageSettings_(imageWidth, imageHeight) {}
+    [[nodiscard]] vec3<double> backgroundColor() const noexcept {
+      return backgroundColor_;
+    }
+    [[nodiscard]] ImageSettings imageSettings() const noexcept {
+      return imageSettings_;
+    }
+  };
+
+  Settings settings_;
+  Camera camera_;
+  std::vector<Mesh> meshes_;
+  std::string fileName_;
+
+  Scene(Settings &&settings, Camera &&camera, std::vector<Mesh> &&meshes,
+        std::string &&fileName)
+      : settings_{settings}, camera_{camera}, meshes_{meshes},
+        fileName_(fileName) {}
+
+public:
+  [[nodiscard]] static Scene loadScene(const std::string &filename) {
+    FILE *fp = fopen(filename.c_str(), "rb");
+    if (!fp) {
+      throw "Failed to open the scene file: " + filename;
+    }
+
+    char fileBuffer[65536];
+    const auto arrToVec3 = [](const rapidjson::Value &arr) {
+      return vec3<double>{arr[0].GetDouble(), arr[1].GetDouble(),
+                          arr[2].GetDouble()};
+    };
+    const auto arrToMatrix3x3 = [](const rapidjson::Value &arr) {
+      return Matrix3x3<double>{
+          arr[0].GetDouble(), arr[1].GetDouble(), arr[2].GetDouble(),
+          arr[3].GetDouble(), arr[4].GetDouble(), arr[5].GetDouble(),
+          arr[6].GetDouble(), arr[7].GetDouble(), arr[8].GetDouble(),
+      };
+    };
+
+    rapidjson::FileReadStream is(fp, fileBuffer, sizeof(fileBuffer));
+    rapidjson::Document document;
+    document.ParseStream(is);
+    const rapidjson::Value &bgc = document["settings"]["background_color"];
+    Settings settings = {
+        arrToVec3(bgc),
+        document["settings"]["image_settings"]["width"].GetUint(),
+        document["settings"]["image_settings"]["height"].GetUint()};
+    const rapidjson::Value &cameraSerttings = document["camera"];
+    Camera camera = {arrToVec3(cameraSerttings["position"]),
+                     arrToMatrix3x3(cameraSerttings["matrix"])};
+    std::vector<Mesh> meshes;
+    const rapidjson::Value &meshesJson = document["meshes"];
+    std::vector<vec3<double>> vertices;
+    std::vector<vec3<size_t>> indicies;
+    for (auto &object : meshesJson.GetArray()) {
+      if (object["vertices"].Size() % 3 != 0) {
+        throw;
+      }
+      for (auto itr = object["vertices"].Begin();
+           itr != object["vertices"].End();) {
+        const double x = itr++->GetDouble();
+        const double y = itr++->GetDouble();
+        const double z = itr++->GetDouble();
+        vertices.emplace_back(x, y, z);
+      }
+      if (object["triangles"].Size() % 3 != 0) {
+        throw;
+      }
+      for (auto itr = object["triangles"].Begin();
+           itr != object["triangles"].End();) {
+        const double x = itr++->GetInt();
+        const double y = itr++->GetInt();
+        const double z = itr++->GetInt();
+        indicies.emplace_back(x, y, z);
+      }
+      meshes.emplace_back(std::move(vertices), std::move(indicies));
+      vertices.clear();
+      indicies.clear();
+    }
+    auto test = filename.find('.');
+    const auto startPos = filename[0] == '.' ? 2 : 0;
+    Scene scene{
+        std::move(settings), std::move(camera), std::move(meshes),
+        filename.substr(startPos, filename.find('.', startPos) - startPos)};
+    return scene;
+  }
+
+  [[nodiscard]] Camera &camera() noexcept { return camera_; }
+
+  void cameraTakeSnapshot() const {
+    camera_.takeSnapshot(
+        fileName_ + ".ppm",
+        {settings_.imageSettings().width, settings_.imageSettings().height},
+        meshes_, settings_.backgroundColor());
   }
 };
 
