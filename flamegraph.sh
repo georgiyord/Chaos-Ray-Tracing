@@ -19,7 +19,7 @@ else
     exit 1
 fi
 
-BINARY_ARGS="1920 1080" # Add your runtime arguments here if needed
+BINARY_ARGS="scene4.crtscene" # Add your runtime arguments here if needed
 
 # --- BUILD ---
 echo "Building target: ${MAKE_TARGET}..."
