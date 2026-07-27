@@ -20,8 +20,10 @@
             rev = if builtins.stringLength N == 1 then "CRT_0${N}" else "CRT_${N}";
           };
 
+          makeTarget = if builtins.fromJSON N > 4 then "release" else "crt_release";
+
           buildPhase = ''
-            make crt_release
+            make $makeTarget
           '';
 
           installPhase = ''
@@ -53,6 +55,8 @@
         CRT02 = mkCRT "2" "sha256-HjoDE/W6PTA0Sj2ygWb3M3zPboKzvjSojHJ3kFg00cA=";
         CRT03 = mkCRT "3" "sha256-n9T/bjAXMRd8AaI49Te3VHOWDKOCfVE2Ga4EjDJDPRE=";
         CRT04 = mkCRT "4" "sha256-2D0F/vCz+XShO/GRsdHuu6fbwkr5l3tM3Kt4DMEZIS4=";
+        CRT05 = mkCRT "5" "sha256-ZrZ6yhVqn9/VnwTZnkOH4/MhaHB20bABALlfSVIhUp4=";
+        CRT06 = mkCRT "6" "sha256-6CWdbRIjWzNbPXeakfR6ADof31O9Lh56f42c9WGDN5w=";
       };
     };
 }
