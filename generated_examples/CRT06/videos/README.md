@@ -1,0 +1,1 @@
+ffmpeg -framerate 24 -i '[repository root]/generated_examples/CRT06/images/CRT06_TASK5_%d.ppm' -c:v libx264 -pix_fmt yuv420p CRT06_animation.mp4
