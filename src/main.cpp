@@ -7,6 +7,7 @@
 #include <iostream>
 #include <limits>
 #include <numbers>
+#include <ostream>
 #include <random>
 #include <string>
 #include <vector>
@@ -360,6 +361,137 @@ void createTriangleImages(const vec2<size_t> resolution) {
   }
 }
 
+// Homework 6
+
+void cameraMovements(const vec2<size_t> resolution) {
+  {
+    // Task 1
+    vec3<double> camera{0, 0, -1};
+    const double deg = 30;
+    const double rad = (std::numbers::pi / 180.) * deg;
+    const auto SIN = std::sin(rad);
+    const auto COS = std::cos(rad);
+    Matrix3x3<double> pan30deg = {COS, 0, -SIN, 0, 1, 0, SIN, 0, COS};
+    camera = camera * pan30deg;
+  }
+  {
+    // Task 2
+    vec3<double> camera{3, 0, 0};
+    Triangle tri{
+        {-1.75, -1.75, -3},
+        {1.75, -1.75, -3},
+        {0, 1.75, -3},
+    };
+    std::ofstream image("CRT06_TASK2.ppm", std::ios::trunc | std::ios::out);
+    image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
+          << " ";
+
+    for (size_t y = 0; y < resolution.y(); ++y) {
+      for (size_t x = 0; x < resolution.x(); ++x) {
+        // get the center of the pixel;
+        double world_x = x + .5;
+        double world_y = y + .5;
+
+        // convert to Normalised Device Coordinate space
+        world_x /= resolution.x();
+        world_y /= resolution.y();
+
+        // convert to Screen space
+        world_x = world_x * 2 - 1;
+        world_y = 1 - world_y * 2;
+
+        // align to aspect ratio
+        world_x *= double(resolution.x()) / resolution.y();
+        vec3<double> direction({world_x, world_y, -1.0});
+        direction.normalise();
+        Ray ray{camera, direction};
+        if (!std::isnan(ray.intersects(tri))) {
+          image << 128 << " " << 128 << " " << 128 << " ";
+        } else {
+          image << 0 << " " << 0 << " " << 0 << " ";
+        }
+      }
+    }
+  }
+  {
+    // Task 3
+    Triangle tri{
+        {-1.75, -1.75, -3},
+        {1.75, -1.75, -3},
+        {0, 1.75, -3},
+    };
+    Camera camera;
+    camera.triangleSnapshot("CRT06_TASK3_NOOP.ppm", resolution, tri);
+
+    camera = {};
+    camera.truck(3);
+    camera.triangleSnapshot("CRT06_TASK3_TRUCK.ppm", resolution, tri);
+
+    camera = {};
+    camera.pedestal(3);
+    camera.triangleSnapshot("CRT06_TASK3_PEDESTAL.ppm", resolution, tri);
+
+    camera = {};
+    camera.dolly(3);
+    camera.triangleSnapshot("CRT06_TASK3_DOLLY.ppm", resolution, tri);
+
+    camera = {};
+    camera.tilt(30);
+    camera.triangleSnapshot("CRT06_TASK3_TILT.ppm", resolution, tri);
+
+    camera = {};
+    camera.pan(30);
+    camera.triangleSnapshot("CRT06_TASK3_PAN.ppm", resolution, tri);
+
+    camera = {};
+    camera.roll(30);
+    camera.triangleSnapshot("CRT06_TASK3_ROLL.ppm", resolution, tri);
+  }
+  {
+    // Task 4
+    Triangle tri{
+        {-1.75, -1.75, -3},
+        {1.75, -1.75, -3},
+        {0, 1.75, -3},
+    };
+    Camera camera;
+    camera.triangleSnapshot("CRT06_TASK4_0-NOOP.ppm", resolution, tri);
+
+    camera.pan(30);
+    camera.triangleSnapshot("CRT06_TASK4_1-PAN.ppm", resolution, tri);
+
+    camera.tilt(30);
+    camera.triangleSnapshot("CRT06_TASK4_2-TILT.ppm", resolution, tri);
+
+    camera.truck(3);
+    camera.triangleSnapshot("CRT06_TASK4_3-TRUCK.ppm", resolution, tri);
+  }
+  {
+    // Task 5
+    Triangle tri{
+        {0, 0, 2},
+        {std::sqrt(3), 0, -1},
+        {-1 * std::sqrt(3), 0, -1},
+    };
+
+    Camera camera;
+    constexpr double SphereRadius = 6;
+    constexpr double DownAngleDeg = -15;
+    constexpr size_t nFrames = 360 / 5;
+    constexpr double AngleStep = (double)360 / nFrames;
+    camera.triangleSnapshot("CRT06_TASK5_0.ppm", resolution, tri);
+    for (size_t i = 0; i < nFrames; ++i) {
+      camera.reset();
+      camera.pan(AngleStep * i);
+      camera.tilt(DownAngleDeg);
+      camera.dolly(SphereRadius);
+
+      camera.triangleSnapshot("CRT06_TASK5_" + std::to_string(i) + ".ppm",
+                              resolution, tri);
+    }
+  }
+}
+
 int main(const int argc, const char **argv) {
   if (argc < 3) {
     std::cout << "Usage: " << argv[0] << "[resolution_x] [resolution_y]"
@@ -381,7 +513,8 @@ int main(const int argc, const char **argv) {
   // createShapeAccent(resolution);
   // createImageFromRayDirections(resolution);
   // crossProductTests();
-  createTriangleImages(resolution);
+  // createTriangleImages(resolution);
+  cameraMovements(resolution);
 
   return 0;
 }

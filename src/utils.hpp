@@ -4,8 +4,11 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <fstream>
+#include <iomanip>
 #include <limits>
 #include <memory>
+#include <ostream>
 #include <stdexcept>
 #include <type_traits>
 
@@ -41,6 +44,25 @@ public:
     return vec3<T>(static_cast<T>(0), static_cast<T>(0), static_cast<T>(0));
   };
 
+  [[nodiscard]] static constexpr vec3<T> POS_X() noexcept {
+    return vec3<T>{static_cast<T>(1), static_cast<T>(0), static_cast<T>(0)};
+  }
+  [[nodiscard]] static constexpr vec3<T> POS_Y() noexcept {
+    return vec3<T>{static_cast<T>(0), static_cast<T>(1), static_cast<T>(0)};
+  }
+  [[nodiscard]] static constexpr vec3<T> POS_Z() noexcept {
+    return vec3<T>{static_cast<T>(0), static_cast<T>(0), static_cast<T>(1)};
+  }
+  [[nodiscard]] static constexpr vec3<T> NEG_X() noexcept {
+    return vec3<T>{static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0)};
+  }
+  [[nodiscard]] static constexpr vec3<T> NEG_Y() noexcept {
+    return vec3<T>{static_cast<T>(0), static_cast<T>(-1), static_cast<T>(0)};
+  }
+  [[nodiscard]] static constexpr vec3<T> NEG_Z() noexcept {
+    return vec3<T>{static_cast<T>(0), static_cast<T>(0), static_cast<T>(-1)};
+  }
+
   [[nodiscard]] constexpr bool operator==(const vec3<T> &rhs) const noexcept {
     return (x_ == rhs.x_) && (y_ == rhs.y_) && (z_ == rhs.z_);
   }
@@ -53,8 +75,22 @@ public:
     return vec3<T>(x_ - rhs.x_, y_ - rhs.y_, z_ - rhs.z_);
   }
 
+  constexpr vec3<T> &operator-=(const vec3<T> &rhs) noexcept {
+    x_ -= rhs.x_;
+    y_ -= rhs.y_;
+    z_ -= rhs.z_;
+    return *this;
+  }
+
   [[nodiscard]] constexpr vec3<T> operator+(const vec3<T> &rhs) const noexcept {
     return vec3<T>(x_ + rhs.x_, y_ + rhs.y_, z_ + rhs.z_);
+  }
+
+  constexpr vec3<T> &operator+=(const vec3<T> &rhs) noexcept {
+    x_ += rhs.x_;
+    y_ += rhs.y_;
+    z_ += rhs.z_;
+    return *this;
   }
 
   template <typename K>
@@ -90,7 +126,22 @@ public:
     }
     return *this;
   }
+
+  constexpr void updateX(T value) noexcept { x_ = value; }
+  constexpr void updateY(T value) noexcept { y_ = value; }
+  constexpr void updateZ(T value) noexcept { z_ = value; }
+  constexpr void update(T x, T y, T z) noexcept {
+    updateX(x);
+    updateY(y);
+    updateZ(z);
+  }
 };
+
+template <typename T>
+std::ostream &operator<<(std::ostream &os, const vec3<T> &vec) {
+  os << "(" << vec.x() << ", " << vec.y() << ", " << vec.z() << ")";
+  return os;
+}
 
 template <typename T>
   requires Numeric<T>
@@ -188,6 +239,7 @@ template <typename T>
 }
 
 template <typename T> class Table {
+protected:
   size_t rows_;
   size_t cols_;
   std::unique_ptr<T[]> arr_;
@@ -229,14 +281,14 @@ public:
 
   [[nodiscard]] constexpr T *end() noexcept { return arr_ + rows_ * cols_; }
 
-  [[nodiscard]] constexpr T get(const vec2<size_t> &pos) {
+  [[nodiscard]] constexpr T &get(const vec2<size_t> &pos) {
     if (pos.x() > cols_ || pos.y() > rows_) {
       throw std::out_of_range("");
     }
     return arr_[(pos.y() * cols_) + pos.x()];
   }
 
-  [[nodiscard]] constexpr T get(const size_t x, const size_t y) {
+  [[nodiscard]] constexpr T &get(const size_t x, const size_t y) {
     if (x > cols_ || y > rows_) {
       throw std::out_of_range("");
     }
@@ -363,6 +415,81 @@ public:
   }
 };
 
+template <typename T>
+  requires Numeric<T>
+class Matrix3x3 {
+  using Matrix = Matrix3x3<T>;
+  T arr_[3][3];
+
+public:
+  constexpr Matrix3x3() noexcept {}
+  constexpr Matrix3x3(T M0x0, T M0x1, T M0x2, T M1x0, T M1x1, T M1x2, T M2x0,
+                      T M2x1, T M2x2) noexcept
+      : arr_{M0x0, M0x1, M0x2, M1x0, M1x1, M1x2, M2x0, M2x1, M2x2} {}
+
+  [[nodiscard]] constexpr const T &operator[](size_t row, size_t col) const {
+    if (row >= 3 || col >= 3)
+      throw std::out_of_range("Invalid positions");
+    return arr_[row][col];
+  }
+
+  [[nodiscard]] static constexpr Matrix3x3<T> zero() noexcept {
+    return {
+        0, 0, 0, 0, 0, 0, 0, 0, 0,
+    };
+  }
+  [[nodiscard]] static constexpr Matrix3x3<T> one() noexcept {
+    return {
+        1, 0, 0, 0, 1, 0, 0, 0, 1,
+    };
+  }
+
+  [[nodiscard]] constexpr Matrix operator*(const Matrix &rhs) const noexcept {
+    return {
+        arr_[0][0] * rhs[0, 0] + arr_[0][1] * rhs[1, 0] +
+            arr_[0][2] * rhs[2, 0],
+        arr_[0][0] * rhs[0, 1] + arr_[0][1] * rhs[1, 1] +
+            arr_[0][2] * rhs[2, 1],
+        arr_[0][0] * rhs[0, 2] + arr_[0][1] * rhs[1, 2] +
+            arr_[0][2] * rhs[2, 2],
+        arr_[1][0] * rhs[0, 0] + arr_[1][1] * rhs[1, 0] +
+            arr_[1][2] * rhs[2, 0],
+        arr_[1][0] * rhs[0, 1] + arr_[1][1] * rhs[1, 1] +
+            arr_[1][2] * rhs[2, 1],
+        arr_[1][0] * rhs[0, 2] + arr_[1][1] * rhs[1, 2] +
+            arr_[1][2] * rhs[2, 2],
+        arr_[2][0] * rhs[0, 0] + arr_[2][1] * rhs[1, 0] +
+            arr_[2][2] * rhs[2, 0],
+        arr_[2][0] * rhs[0, 1] + arr_[2][1] * rhs[1, 1] +
+            arr_[2][2] * rhs[2, 1],
+        arr_[2][0] * rhs[0, 2] + arr_[2][1] * rhs[1, 2] +
+            arr_[2][2] * rhs[2, 2],
+    };
+  }
+
+  [[nodiscard]] friend constexpr vec3<T>
+  operator*(const vec3<T> &vec, const Matrix &matrix) noexcept {
+    return {vec.x() * matrix[0, 0] + vec.y() * matrix[1, 0] +
+                vec.z() * matrix[2, 0],
+            vec.x() * matrix[0, 1] + vec.y() * matrix[1, 1] +
+                vec.z() * matrix[2, 1],
+            vec.x() * matrix[0, 2] + vec.y() * matrix[1, 2] +
+                vec.z() * matrix[2, 2]};
+  }
+};
+
+template <typename T>
+std::ostream &operator<<(std::ostream &os, const Matrix3x3<T> &mat) {
+  os << std::fixed << std::setprecision(6) << std::right;
+  os << std::setw(4) << mat[0, 0] << ", " << std::setw(4) << mat[0, 1] << ", "
+     << std::setw(4) << mat[0, 2] << '\n'
+     << std::setw(4) << mat[1, 0] << ", " << std::setw(4) << mat[1, 1] << ", "
+     << std::setw(4) << mat[1, 2] << '\n'
+     << std::setw(4) << mat[2, 0] << ", " << std::setw(4) << mat[2, 1] << ", "
+     << std::setw(4) << mat[2, 2];
+  return os;
+}
+
 class Ray {
   vec3<double> origin_;
   vec3<double> direction_;
@@ -379,15 +506,23 @@ public:
   [[nodiscard]] constexpr vec3<double> direction() noexcept {
     return direction_;
   }
+  [[nodiscard]] constexpr const vec3<double> origin() const noexcept {
+    return origin_;
+  }
+  [[nodiscard]] constexpr const vec3<double> direction() const noexcept {
+    return direction_;
+  }
 
   [[nodiscard]] constexpr double
   intersects(const Triangle triangle) const noexcept {
-    if (dotProduct(direction_, triangle.normal()) >= 0) {
+    const auto rayStep = dotProduct(direction_, triangle.normal());
+    const auto planeDistance =
+        dotProduct(triangle.point1() - origin_, triangle.normal());
+    if (rayStep >= 0) {
       return std::numeric_limits<double>::quiet_NaN();
     }
-    double tStep = dotProduct(triangle.point1() - origin_, triangle.normal()) /
-                   dotProduct(direction_, triangle.normal());
-    vec3<double> pointPlaneIntersection = origin_ + tStep * direction_;
+    double tSteps = planeDistance / rayStep;
+    vec3<double> pointPlaneIntersection = origin_ + tSteps * direction_;
 
     if (dotProduct(triangle.normal(),
                    crossProduct(triangle.point2() - triangle.point1(),
@@ -405,7 +540,126 @@ public:
         0)
       return std::numeric_limits<double>::quiet_NaN();
 
-    return tStep;
+    return tSteps;
+  }
+};
+
+class Camera {
+  vec3<double> position_;
+  Matrix3x3<double> orientation_;
+
+public:
+  constexpr Camera(vec3<double> position,
+                   Matrix3x3<double> orientation) noexcept
+      : position_(position), orientation_(orientation) {}
+  constexpr Camera() noexcept
+      : position_(vec3<double>::zero()),
+        orientation_(Matrix3x3<double>::one()) {}
+
+  [[nodiscard]] constexpr const vec3<double> &position() const noexcept {
+    return position_;
+  }
+  [[nodiscard]] constexpr const Matrix3x3<double> &
+  orientation() const noexcept {
+    return orientation_;
+  }
+
+  constexpr void updatePosition(const vec3<double> &value) noexcept {
+    position_ = value;
+  }
+  constexpr void updateOrientation(const Matrix3x3<double> &value) noexcept {
+    orientation_ = value;
+  }
+
+  constexpr void truck(double value) noexcept {
+    position_ += vec3<double>{value, 0, 0} * orientation_;
+  }
+  constexpr void pedestal(double value) noexcept {
+    position_ += vec3<double>{0, value, 0} * orientation_;
+  }
+  constexpr void dolly(double value) noexcept {
+    position_ += vec3<double>{0, 0, value} * orientation_;
+  }
+
+  constexpr void tilt(double degrees) noexcept {
+    auto const radians = degrees * (std::numbers::pi / 180.);
+    const double SIN = std::sin(radians);
+    const double COS = std::cos(radians);
+    orientation_ =
+        Matrix3x3<double>{1, 0, 0, 0, COS, SIN, 0, -SIN, COS} * orientation_;
+  }
+  constexpr void pan(double degrees) noexcept {
+    auto const radians = degrees * (std::numbers::pi / 180.);
+    const double SIN = std::sin(radians);
+    const double COS = std::cos(radians);
+    orientation_ =
+        Matrix3x3<double>{COS, 0, -SIN, 0, 1, 0, SIN, 0, COS} * orientation_;
+  }
+  constexpr void roll(double degrees) noexcept {
+    auto const radians = degrees * (std::numbers::pi / 180.);
+    const double SIN = std::sin(radians);
+    const double COS = std::cos(radians);
+    orientation_ =
+        Matrix3x3<double>{COS, SIN, 0, -SIN, COS, 0, 0, 0, 1} * orientation_;
+  }
+
+  void triangleSnapshot(const std::string &fileName,
+                        const vec2<size_t> &resolution,
+                        const Triangle &triangle) const {
+    std::ofstream image(fileName, std::ios::trunc | std::ios::out);
+    image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
+          << " ";
+
+    // some coloring calculations
+    const vec3<double> e1 = triangle.point2() - triangle.point1();
+    const vec3<double> e2 = triangle.point3() - triangle.point1();
+    const vec3<double> e3 = triangle.point2() - triangle.point3();
+
+    const double area = crossProduct(e1, e2).length() / 2;
+    const double diameter = e1.length() * e2.length() * e3.length() / 2 / area;
+
+    // TODO: research if SIMD can be used here and how to nudge the compiler
+    for (size_t y = 0; y < resolution.y(); ++y) {
+      for (size_t x = 0; x < resolution.x(); ++x) {
+        // get the center of the pixel;
+        double world_x = x + .5;
+        double world_y = y + .5;
+
+        // convert to Normalised Device Coordinate space
+        world_x /= resolution.x();
+        world_y /= resolution.y();
+
+        // convert to Screen space
+        world_x = world_x * 2 - 1;
+        world_y = 1 - world_y * 2;
+
+        // align to aspect ratio
+        world_x *= double(resolution.x()) / resolution.y();
+        vec3<double> direction({world_x, world_y, -1.0});
+        direction.normalise();
+        direction = direction * orientation_;
+        Ray ray{position_, direction};
+        const auto steps = ray.intersects(triangle);
+        if (!std::isnan(steps)) {
+          const auto hitPoint = ray.origin() + steps * ray.direction();
+          const auto strengthR =
+              (diameter - (hitPoint - triangle.point1()).length()) / diameter;
+          const auto strengthG =
+              (diameter - (hitPoint - triangle.point2()).length()) / diameter;
+          const auto strengthB =
+              (diameter - (hitPoint - triangle.point3()).length()) / diameter;
+          image << static_cast<int>(255 * strengthR) << " "
+                << static_cast<int>(255 * strengthG) << " "
+                << static_cast<int>(255 * strengthB) << " ";
+        } else {
+          image << 0 << " " << 0 << " " << 0 << " ";
+        }
+      }
+    }
+  }
+  constexpr void reset() noexcept {
+    position_ = vec3<double>::zero();
+    orientation_ = Matrix3x3<double>::one();
   }
 };
 
