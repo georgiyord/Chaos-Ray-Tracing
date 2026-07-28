@@ -909,7 +909,16 @@ public:
 
   void cameraTakeSnapshot() const {
     camera_.takeSnapshot(
-        fileName_ + ".ppm",
+        // fileName_ + ".ppm",
+        "render.ppm",
+        {settings_.imageSettings().width, settings_.imageSettings().height},
+        meshes_, settings_.backgroundColor());
+  }
+
+  void cameraTakeSnapshot(const std::string& outFileName) const {
+    camera_.takeSnapshot(
+        // fileName_ + ".ppm",
+        outFileName,
         {settings_.imageSettings().width, settings_.imageSettings().height},
         meshes_, settings_.backgroundColor());
   }
