@@ -31,6 +31,12 @@
             cp build/Release/crt_release $out/bin/CRT-Homework
           '';
         };
+      fetchGoogleDrive =
+        { driveFileId, hash }:
+        pkgs.fetchurl {
+          url = "https://drive.google.com/uc?export=download&id=" + driveFileId;
+          inherit hash;
+        };
     in
     {
       devShells.x86_64-linux.default = pkgs.mkShell {
@@ -57,6 +63,27 @@
         CRT04 = mkCRT "4" "sha256-2D0F/vCz+XShO/GRsdHuu6fbwkr5l3tM3Kt4DMEZIS4=";
         CRT05 = mkCRT "5" "sha256-ZrZ6yhVqn9/VnwTZnkOH4/MhaHB20bABALlfSVIhUp4=";
         CRT06 = mkCRT "6" "sha256-6CWdbRIjWzNbPXeakfR6ADof31O9Lh56f42c9WGDN5w=";
+
+        CRT07-Scene0 = fetchGoogleDrive {
+          driveFileId = "11j-m2eP7bGAIVHLf71Y5avSc0gKTScro";
+          hash = "sha256-RIa3ib28Q7kvm+hzSnk89VPGYPlsI58qfQwZVMHukQM=";
+        };
+        CRT07-Scene1 = fetchGoogleDrive {
+          driveFileId = "10LTURJvKSUtC2gjPU0EHG-okI9xz1bER";
+          hash = "sha256-6pzWFJUwUQYy4pAWcoZRi0R/fxiNgzbFqM8sugUaEEw=";
+        };
+        CRT07-Scene2 = fetchGoogleDrive {
+          driveFileId = "1WcwPWip6JvqXSy96wnr5nWoGUlMHFyMi";
+          hash = "sha256-ispiKtvbvtHNNaiVhl+XmC4zJCr8DgeCsXgzPI1iO38=";
+        };
+        CRT07-Scene3 = fetchGoogleDrive {
+          driveFileId = "1a_j-zkRdGL8ZVtLGsQ8MIP1evhka7WpG";
+          hash = "sha256-qlJNEi9k2ikL2SUvIQrNfclDOob3Zilq5++kj+pkRn0=";
+        };
+        CRT07-Scene4 = fetchGoogleDrive {
+          driveFileId = "10xKWk2CkCDMWzuCD8dhHQg1c9UmM8DnY";
+          hash = "sha256-Vmdyx0iW+t3w1Nu8v6wzRqZisWvioKLW1MJWKSDvqtg=";
+        };
       };
     };
 }
