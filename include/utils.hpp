@@ -869,7 +869,7 @@ public:
     Camera camera = {arrToVec3(cameraSerttings["position"]),
                      arrToMatrix3x3(cameraSerttings["matrix"])};
     std::vector<Mesh> meshes;
-    const rapidjson::Value &meshesJson = document["meshes"];
+    const rapidjson::Value &meshesJson = document["objects"];
     std::vector<vec3<double>> vertices;
     std::vector<vec3<size_t>> indicies;
     for (auto &object : meshesJson.GetArray()) {
