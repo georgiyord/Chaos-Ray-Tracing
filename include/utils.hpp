@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
@@ -12,6 +13,7 @@
 #include <limits>
 #include <memory>
 #include <ostream>
+#include <random>
 #include <rapidjson/document.h>
 #include <rapidjson/filereadstream.h>
 #include <stdexcept>
@@ -147,7 +149,8 @@ public:
 
 template <typename T>
 std::ostream &operator<<(std::ostream &os, const vec3<T> &vec) {
-  os << "(" << vec.x() << ", " << vec.y() << ", " << vec.z() << ")";
+  os << static_cast<int>(vec.x()) << " " << static_cast<int>(vec.y()) << " "
+     << static_cast<int>(vec.z());
   return os;
 }
 
@@ -337,6 +340,30 @@ constexpr Color Cyan = Color(0, 255, 255);
 constexpr Color Purple = Color(255, 0, 255);
 constexpr Color White = Color(255, 255, 255);
 }; // namespace Colors
+
+[[nodiscard]] inline Color randomColor() {
+  static std::random_device rd;
+  static std::mt19937 gen(rd());
+  static std::uniform_int_distribution<u32> dist(0, 6 * 256 - 1);
+
+  u32 rng = dist(gen);
+  u8 secondaryValue = rng % 256;
+
+  switch (rng / 256) {
+  case 0:
+    return Color{255, secondaryValue, 0};
+  case 1:
+    return Color{static_cast<u8>(255 - secondaryValue), 255, 0};
+  case 2:
+    return Color{0, 255, secondaryValue};
+  case 3:
+    return Color{0, static_cast<u8>(255 - secondaryValue), 255};
+  case 4:
+    return Color{secondaryValue, 0, 255};
+  default:
+    return Color{255, 0, static_cast<u8>(255 - secondaryValue)};
+  }
+}
 
 class Shape {
   vec2<double> pos_;
@@ -753,6 +780,25 @@ public:
           << " ";
 
     // TODO: research if SIMD can be used here and how to nudge the compiler
+    std::vector<std::vector<Color>> randomTriangleColors;
+    randomTriangleColors.reserve(meshes.size());
+
+    for (size_t j = 0; j < meshes.size(); ++j) {
+      std::vector<Color> colors;
+      colors.reserve(meshes[j].indicies().size());
+      for (size_t i = 0; i < meshes[j].indicies().size(); ++i) {
+        colors.push_back(randomColor());
+      }
+      randomTriangleColors.push_back(std::move(colors));
+    }
+    double maxStep = 0;
+    struct PixelInfo {
+      Ray ray;
+      bool hit;
+      Triangle triangle;
+      double raySteps;
+    };
+    Table<PixelInfo> pixels(resolution);
     for (size_t y = 0; y < resolution.y(); ++y) {
       for (size_t x = 0; x < resolution.x(); ++x) {
         // get the center of the pixel;
@@ -774,28 +820,51 @@ public:
         direction = direction * orientation_;
         Ray ray{position_, direction};
         double steps = std::numeric_limits<double>::infinity();
-        // Triangle closesHitTriangle;
-        for (auto &mesh : meshes) {
-          for (size_t i = 0; i < mesh.indicies().size(); ++i) {
-            // auto hit = 1;
-            // std::cout << "Hello Triangle " << hit++ << '\n' << std::flush;
-            const auto stepsTmp = ray.intersects(
-                mesh.getTriangle(mesh.indicies()[i]), mesh.normals()[i]);
+        Color triangleColor;
+        Triangle tri;
+        for (size_t j = 0; j < meshes.size(); ++j) {
+          for (size_t i = 0; i < meshes[j].indicies().size(); ++i) {
+            const auto triangleTmp =
+                meshes[j].getTriangle(meshes[j].indicies()[i]);
+            const auto stepsTmp =
+                ray.intersects(triangleTmp, meshes[j].normals()[i]);
             if (std::isnan(stepsTmp))
               continue;
             if (stepsTmp < steps) {
               steps = stepsTmp;
-              // closesHitTriangle = triangle;
+              triangleColor = randomTriangleColors[j][i];
+              tri = triangleTmp;
             }
           }
         }
+        pixels.get(x, y).ray = ray;
         if (steps != std::numeric_limits<double>::infinity()) {
-          const auto hitPoint = ray.origin() + steps * ray.direction();
-          image << 255 << " " << 255 << " " << 255 << " ";
+          if (steps > maxStep)
+            maxStep = steps;
+          pixels.get(x, y).hit = true;
+          pixels.get(x, y).triangle = tri;
+          pixels.get(x, y).raySteps = steps;
         } else {
+          pixels.get(x, y).hit = false;
+        }
+      }
+    }
+
+    for (size_t y = 0; y < resolution.y(); ++y) {
+      for (size_t x = 0; x < resolution.x(); ++x) {
+        if (pixels.get(x, y).hit == false) {
           image << static_cast<u32>(backgroundColor.x() * 255) << " "
                 << static_cast<u32>(backgroundColor.y() * 255) << " "
                 << static_cast<u32>(backgroundColor.z() * 255) << " ";
+        } else {
+          // image << Colors::White << " ";
+          // image << triangleColor << " ";
+          // image << Colors::White * (1 - dotProduct(triangle.normal(),
+          // ray.direction())) << " "; image << triangleColor * (1 -
+          // dotProduct(tri.normal(), ray.direction())) << " ";
+          image << Colors::White *
+                       (1 - pixels.get(x, y).raySteps / (maxStep * 2))
+                << " ";
         }
       }
     }
@@ -915,7 +984,7 @@ public:
         meshes_, settings_.backgroundColor());
   }
 
-  void cameraTakeSnapshot(const std::string& outFileName) const {
+  void cameraTakeSnapshot(const std::string &outFileName) const {
     camera_.takeSnapshot(
         // fileName_ + ".ppm",
         outFileName,
