@@ -367,46 +367,6 @@ constexpr Color White = Color(255, 255, 255);
   }
 }
 
-class Shape {
-  vec2<double> pos_;
-
-protected:
-  constexpr Shape(const vec2<double> &pos) noexcept : pos_(pos) {}
-  constexpr Shape(double x, double y) noexcept : pos_(x, y) {}
-
-public:
-  [[nodiscard]] constexpr vec2<double> position() const noexcept {
-    return pos_;
-  }
-};
-
-class Recht : public Shape {
-  vec2<double> size_;
-
-public:
-  constexpr Recht(const vec2<double> &size, const vec2<double> &pos) noexcept
-      : Shape(pos), size_(size) {}
-  constexpr Recht(const vec2<double> &size, double pos_x, double pos_y) noexcept
-      : Shape(pos_x, pos_y), size_(size) {}
-  constexpr Recht(double size_x, double size_y,
-                  const vec2<double> &pos) noexcept
-      : Shape(pos), size_(size_x, size_y) {}
-  constexpr Recht(double size_x, double size_y, double pos_x,
-                  double pos_y) noexcept
-      : Shape(pos_x, pos_y), size_(size_x, size_y) {}
-};
-
-class Circle : public Shape {
-  double radius_;
-
-public:
-  constexpr Circle(double radius, const vec2<double> &pos) noexcept
-      : Shape(pos), radius_(radius) {}
-  constexpr Circle(double radius, double pos_x, double pos_y) noexcept
-      : Shape(pos_x, pos_y), radius_(radius) {}
-  [[nodiscard]] constexpr double radius() const noexcept { return radius_; }
-};
-
 // Note: in right-hand rule coordinate system, triangles points are defined
 // counter clockwise
 class Triangle {
