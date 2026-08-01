@@ -367,6 +367,30 @@ constexpr Color White = Color(255, 255, 255);
   }
 }
 
+class Ray {
+  vec3<double> origin_;
+  vec3<double> direction_;
+
+public:
+  // returns the distance from the ray origin to the intersection point, or NaN
+  // if the ray doesn't intersect the triangle.
+  constexpr Ray(vec3<double> origin, vec3<double> direction) noexcept
+      : origin_(origin), direction_(direction) {}
+  constexpr Ray() noexcept
+      : origin_(vec3<double>::zero()), direction_(vec3<double>::zero()) {}
+
+  [[nodiscard]] constexpr vec3<double> origin() noexcept { return origin_; }
+  [[nodiscard]] constexpr vec3<double> direction() noexcept {
+    return direction_;
+  }
+  [[nodiscard]] constexpr const vec3<double> origin() const noexcept {
+    return origin_;
+  }
+  [[nodiscard]] constexpr const vec3<double> direction() const noexcept {
+    return direction_;
+  }
+};
+
 // Note: in right-hand rule coordinate system, triangles points are defined
 // counter clockwise
 class Triangle {
@@ -401,6 +425,26 @@ public:
     point1_ = p1;
     point2_ = p2;
     point3_ = p3;
+  }
+
+
+  [[nodiscard]] constexpr double intersects(const Ray &ray, const vec3<double> &normal) const noexcept {
+    const auto rayStep = dotProduct(ray.direction(), normal);
+    const auto planeDistance = dotProduct(point1() - ray.origin(), normal);
+    if (rayStep >= 0) {
+      return std::numeric_limits<double>::quiet_NaN();
+    }
+    double tSteps = planeDistance / rayStep;
+    vec3<double> pointPlaneIntersection = ray.origin() + tSteps * ray.direction();
+
+    if (dotProduct(normal, crossProduct(point2() - point1(), pointPlaneIntersection - point1())) < 0)
+      return std::numeric_limits<double>::quiet_NaN();
+    if (dotProduct(normal, crossProduct(point3() - point2(), pointPlaneIntersection - point2())) < 0)
+      return std::numeric_limits<double>::quiet_NaN();
+    if (dotProduct(normal, crossProduct(point1() - point3(), pointPlaneIntersection - point3())) < 0)
+      return std::numeric_limits<double>::quiet_NaN();
+
+    return tSteps;
   }
 };
 
@@ -478,86 +522,6 @@ std::ostream &operator<<(std::ostream &os, const Matrix3x3<T> &mat) {
      << std::setw(4) << mat[2, 2];
   return os;
 }
-
-class Ray {
-  vec3<double> origin_;
-  vec3<double> direction_;
-
-public:
-  // returns the distance from the ray origin to the intersection point, or NaN
-  // if the ray doesn't intersect the triangle.
-  constexpr Ray(vec3<double> origin, vec3<double> direction) noexcept
-      : origin_(origin), direction_(direction) {}
-  constexpr Ray() noexcept
-      : origin_(vec3<double>::zero()), direction_(vec3<double>::zero()) {}
-
-  [[nodiscard]] constexpr vec3<double> origin() noexcept { return origin_; }
-  [[nodiscard]] constexpr vec3<double> direction() noexcept {
-    return direction_;
-  }
-  [[nodiscard]] constexpr const vec3<double> origin() const noexcept {
-    return origin_;
-  }
-  [[nodiscard]] constexpr const vec3<double> direction() const noexcept {
-    return direction_;
-  }
-
-  [[nodiscard]] constexpr double
-  intersects(const Triangle &triangle) const noexcept {
-    const auto rayStep = dotProduct(direction_, triangle.normal());
-    const auto planeDistance =
-        dotProduct(triangle.point1() - origin_, triangle.normal());
-    if (rayStep >= 0) {
-      return std::numeric_limits<double>::quiet_NaN();
-    }
-    double tSteps = planeDistance / rayStep;
-    vec3<double> pointPlaneIntersection = origin_ + tSteps * direction_;
-
-    if (dotProduct(triangle.normal(),
-                   crossProduct(triangle.point2() - triangle.point1(),
-                                pointPlaneIntersection - triangle.point1())) <
-        0)
-      return std::numeric_limits<double>::quiet_NaN();
-    if (dotProduct(triangle.normal(),
-                   crossProduct(triangle.point3() - triangle.point2(),
-                                pointPlaneIntersection - triangle.point2())) <
-        0)
-      return std::numeric_limits<double>::quiet_NaN();
-    if (dotProduct(triangle.normal(),
-                   crossProduct(triangle.point1() - triangle.point3(),
-                                pointPlaneIntersection - triangle.point3())) <
-        0)
-      return std::numeric_limits<double>::quiet_NaN();
-
-    return tSteps;
-  }
-  [[nodiscard]] constexpr double
-  intersects(const Triangle &triangle,
-             const vec3<double> &normal) const noexcept {
-    const auto rayStep = dotProduct(direction_, normal);
-    const auto planeDistance = dotProduct(triangle.point1() - origin_, normal);
-    if (rayStep >= 0) {
-      return std::numeric_limits<double>::quiet_NaN();
-    }
-    double tSteps = planeDistance / rayStep;
-    vec3<double> pointPlaneIntersection = origin_ + tSteps * direction_;
-
-    if (dotProduct(normal, crossProduct(triangle.point2() - triangle.point1(),
-                                        pointPlaneIntersection -
-                                            triangle.point1())) < 0)
-      return std::numeric_limits<double>::quiet_NaN();
-    if (dotProduct(normal, crossProduct(triangle.point3() - triangle.point2(),
-                                        pointPlaneIntersection -
-                                            triangle.point2())) < 0)
-      return std::numeric_limits<double>::quiet_NaN();
-    if (dotProduct(normal, crossProduct(triangle.point1() - triangle.point3(),
-                                        pointPlaneIntersection -
-                                            triangle.point3())) < 0)
-      return std::numeric_limits<double>::quiet_NaN();
-
-    return tSteps;
-  }
-};
 
 class Mesh {
 public:
@@ -719,11 +683,8 @@ public:
         Triangle tri;
         for (size_t j = 0; j < meshes.size(); ++j) {
           for (size_t i = 0; i < meshes[j].indicies().size(); ++i) {
-            const auto triangleTmp =
-                meshes[j].getTriangle(meshes[j].indicies()[i]);
-            const auto stepsTmp =
-                // triangleTmp.intersects()
-                ray.intersects(triangleTmp, meshes[j].normals()[i]);
+            const auto triangleTmp = meshes[j].getTriangle(meshes[j].indicies()[i]);
+            const auto stepsTmp = triangleTmp.intersects(ray, meshes[j].normals()[i]);
             if (std::isnan(stepsTmp))
               continue;
             if (stepsTmp < steps) {
