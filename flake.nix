@@ -47,6 +47,8 @@
           bear # create clangd compile_commands.json
           perf
           flamegraph
+          nix-direnv
+          direnv
         ];
 
         inputsFrom = with pkgs; [ ];
