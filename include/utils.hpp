@@ -374,24 +374,17 @@ class Triangle {
   Point point1_;
   Point point2_;
   Point point3_;
-  mutable bool dirty;
-  mutable Point normal_;
 
 public:
   constexpr Triangle(Point point1, Point point2, Point point3) noexcept
-      : point1_(point1), point2_(point2), point3_(point3), dirty(true),
-        normal_(vec3<double>::zero()) {}
+      : point1_(point1), point2_(point2), point3_(point3) {}
   constexpr Triangle() noexcept
-      : point1_(Point::zero()), point2_(Point::zero()), point3_(Point::zero()),
-        dirty(true), normal_(vec3<double>::zero()) {}
+      : point1_(Point::zero()), point2_(Point::zero()), point3_(Point::zero()) {}
+
   [[nodiscard]] constexpr Point normal() const noexcept {
-    if (dirty) {
-      const Point vec1 = point2_ - point1_;
-      const Point vec2 = point3_ - point1_;
-      normal_ = crossProduct(vec1, vec2).normalise();
-      dirty = false;
-    }
-    return normal_;
+    const Point vec1 = point2_ - point1_;
+    const Point vec2 = point3_ - point1_;
+    return crossProduct(vec1, vec2).normalise();
   }
 
   [[nodiscard]] double getArea() const noexcept {
@@ -408,7 +401,6 @@ public:
     point1_ = p1;
     point2_ = p2;
     point3_ = p3;
-    dirty = true;
   }
 };
 
@@ -581,7 +573,7 @@ public:
       return parent_->getTriangle(*itr_);
     }
     ConstTriangleIterator &operator++() noexcept {
-      ++itr_;
+      ++itr_; 
       return *this;
     }
     bool operator!=(const ConstTriangleIterator &rhs) const noexcept {
@@ -730,6 +722,7 @@ public:
             const auto triangleTmp =
                 meshes[j].getTriangle(meshes[j].indicies()[i]);
             const auto stepsTmp =
+                // triangleTmp.intersects()
                 ray.intersects(triangleTmp, meshes[j].normals()[i]);
             if (std::isnan(stepsTmp))
               continue;
