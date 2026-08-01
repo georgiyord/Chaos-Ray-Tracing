@@ -1,11 +1,11 @@
 #include <iostream>
 #include <utils.hpp>
+#include <string>
 
-int main(const int argc, const char **argv) {
+int main(int argc, char **argv) {
   if (argc < 2) {
     std::cout << "Usage: " << argv[0]
-              << " [path to .crtscene file] <optional: output file name>"
-              << std::endl;
+              << " <path to .crtscene file> [output file name]\n";
     return 1;
   }
 

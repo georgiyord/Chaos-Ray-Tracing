@@ -112,7 +112,9 @@ public:
   template <typename K>
   [[nodiscard]] constexpr friend vec3<T> operator*(const vec3<T> &vec,
                                                    const K scalar) noexcept {
-    return vec3<T>(vec.x_ * scalar, vec.y_ * scalar, vec.z_ * scalar);
+    return vec3<T>(static_cast<T>(vec.x_ * scalar),
+                   static_cast<T>(vec.y_ * scalar),
+                   static_cast<T>(vec.z_ * scalar));
   }
 
   [[nodiscard]] constexpr vec3<T> operator/(const vec3<T> &rhs) const {
@@ -210,7 +212,7 @@ public:
     return std::sqrt(x_ * x_ + y_ * y_);
   }
 
-  [[nodiscard]] constexpr vec3<T> &normalise() noexcept {
+  [[nodiscard]] constexpr vec2<T> &normalise() noexcept {
     double _length = length();
     if (_length != 0) {
       x_ /= _length;
@@ -273,7 +275,7 @@ public:
       if (rows_ != rhs.rows_ || cols_ != rhs.cols_) {
         rows_ = rhs.rows_;
         cols_ = rhs.cols_;
-        arr_ = new T[rows_ * cols_];
+        arr_ = std::make_unique<T[]>(rows_ * cols_);
       }
       for (u32 i = 0; i < rows_ * cols_; ++i) {
         arr_[i] = rhs.arr_[i];
@@ -293,28 +295,28 @@ public:
   [[nodiscard]] constexpr T *end() noexcept { return arr_ + rows_ * cols_; }
 
   [[nodiscard]] constexpr T &get(const vec2<size_t> &pos) {
-    if (pos.x() > cols_ || pos.y() > rows_) {
+    if (pos.x() >= cols_ || pos.y() >= rows_) {
       throw std::out_of_range("");
     }
     return arr_[(pos.y() * cols_) + pos.x()];
   }
 
   [[nodiscard]] constexpr T &get(const size_t x, const size_t y) {
-    if (x > cols_ || y > rows_) {
+    if (x >= cols_ || y >= rows_) {
       throw std::out_of_range("");
     }
     return arr_[(y * cols_) + x];
   }
 
   [[nodiscard]] constexpr const T &get(const vec2<size_t> &pos) const {
-    if (pos.x() > cols_ || pos.y() > rows_) {
+    if (pos.x() >= cols_ || pos.y() >= rows_) {
       throw std::out_of_range("");
     }
     return arr_[(pos.y() * cols_) + pos.x()];
   }
 
   [[nodiscard]] constexpr const T &get(u32 x, u32 y) const {
-    if (x > cols_ || y > rows_) {
+    if (x >= cols_ || y >= rows_) {
       throw std::out_of_range("");
     }
     return arr_[(y * cols_) + x];
@@ -347,7 +349,7 @@ constexpr Color White = Color(255, 255, 255);
   static std::uniform_int_distribution<u32> dist(0, 6 * 256 - 1);
 
   u32 rng = dist(gen);
-  u8 secondaryValue = rng % 256;
+  u8 secondaryValue = static_cast<u8>(rng % 256);
 
   switch (rng / 256) {
   case 0:
@@ -402,7 +404,7 @@ public:
       : Shape(pos), radius_(radius) {}
   constexpr Circle(double radius, double pos_x, double pos_y) noexcept
       : Shape(pos_x, pos_y), radius_(radius) {}
-  [[nodiscard]] constexpr size_t radius() const noexcept { return radius_; }
+  [[nodiscard]] constexpr double radius() const noexcept { return radius_; }
 };
 
 // Note: in right-hand rule coordinate system, triangles points are defined
@@ -412,8 +414,8 @@ class Triangle {
   Point point1_;
   Point point2_;
   Point point3_;
-  mutable Point normal_;
   mutable bool dirty;
+  mutable Point normal_;
 
 public:
   constexpr Triangle(Point point1, Point point2, Point point3) noexcept
@@ -460,7 +462,7 @@ public:
   constexpr Matrix3x3() noexcept {}
   constexpr Matrix3x3(T M0x0, T M0x1, T M0x2, T M1x0, T M1x1, T M1x2, T M2x0,
                       T M2x1, T M2x2) noexcept
-      : arr_{M0x0, M0x1, M0x2, M1x0, M1x1, M1x2, M2x0, M2x1, M2x2} {}
+      : arr_{{M0x0, M0x1, M0x2}, {M1x0, M1x1, M1x2}, {M2x0, M2x1, M2x2}} {}
 
   [[nodiscard]] constexpr const T &operator[](size_t row, size_t col) const {
     if (row >= 3 || col >= 3)
@@ -638,7 +640,7 @@ public:
   Mesh(std::vector<vec3<double>> &&verticies,
        std::vector<vec3<size_t>> indicies)
       : vertices_{std::move(verticies)}, indicies_{std::move(indicies)} {
-    for (auto vertexIndicies : indicies_) {
+    for (const auto &vertexIndicies : indicies_) {
       normals_.emplace_back(getTriangle(vertexIndicies).normal());
     }
   }
@@ -718,109 +720,50 @@ public:
         Matrix3x3<double>{COS, SIN, 0, -SIN, COS, 0, 0, 0, 1} * orientation_;
   }
 
-  void triangleSnapshot(const std::string &fileName,
-                        const vec2<size_t> &resolution,
-                        const Triangle &triangle) const {
-    std::ofstream image(fileName, std::ios::trunc | std::ios::out);
-    image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
-          << " ";
-
-    // some coloring calculations
-    const vec3<double> e1 = triangle.point2() - triangle.point1();
-    const vec3<double> e2 = triangle.point3() - triangle.point1();
-    const vec3<double> e3 = triangle.point2() - triangle.point3();
-
-    const double area = crossProduct(e1, e2).length() / 2;
-    const double diameter = e1.length() * e2.length() * e3.length() / 2 / area;
-
-    // TODO: research if SIMD can be used here and how to nudge the compiler
-    for (size_t y = 0; y < resolution.y(); ++y) {
-      for (size_t x = 0; x < resolution.x(); ++x) {
-        // get the center of the pixel;
-        double world_x = x + .5;
-        double world_y = y + .5;
-
-        // convert to Normalised Device Coordinate space
-        world_x /= resolution.x();
-        world_y /= resolution.y();
-
-        // convert to Screen space
-        world_x = world_x * 2 - 1;
-        world_y = 1 - world_y * 2;
-
-        // align to aspect ratio
-        world_x *= double(resolution.x()) / resolution.y();
-        vec3<double> direction({world_x, world_y, -1.0});
-        direction.normalise();
-        direction = direction * orientation_;
-        Ray ray{position_, direction};
-        const auto steps = ray.intersects(triangle);
-        if (!std::isnan(steps)) {
-          const auto hitPoint = ray.origin() + steps * ray.direction();
-          const auto strengthR =
-              (diameter - (hitPoint - triangle.point1()).length()) / diameter;
-          const auto strengthG =
-              (diameter - (hitPoint - triangle.point2()).length()) / diameter;
-          const auto strengthB =
-              (diameter - (hitPoint - triangle.point3()).length()) / diameter;
-          image << static_cast<int>(255 * strengthR) << " "
-                << static_cast<int>(255 * strengthG) << " "
-                << static_cast<int>(255 * strengthB) << " ";
-        } else {
-          image << 0 << " " << 0 << " " << 0 << " ";
-        }
-      }
-    }
-  }
   void takeSnapshot(const std::string &fileName, const vec2<size_t> &resolution,
                     const std::vector<Mesh> &meshes,
                     const vec3<double> &backgroundColor) const {
     std::ofstream image(fileName, std::ios::trunc | std::ios::out);
+    if (!image.is_open()){
+      throw std::runtime_error("Could not open " + fileName + " for writing!");
+    }
     image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
           << " ";
 
     // TODO: research if SIMD can be used here and how to nudge the compiler
-    std::vector<std::vector<Color>> randomTriangleColors;
-    randomTriangleColors.reserve(meshes.size());
-
-    for (size_t j = 0; j < meshes.size(); ++j) {
-      std::vector<Color> colors;
-      colors.reserve(meshes[j].indicies().size());
-      for (size_t i = 0; i < meshes[j].indicies().size(); ++i) {
-        colors.push_back(randomColor());
-      }
-      randomTriangleColors.push_back(std::move(colors));
-    }
-    double maxStep = 0;
     struct PixelInfo {
       Ray ray;
       bool hit;
       Triangle triangle;
       double raySteps;
     };
-    Table<PixelInfo> pixels(resolution);
+
+    const double resolutionWidth = static_cast<double>(resolution.x());
+    const double resolutionHeight = static_cast<double>(resolution.y());
+
+    // Table<PixelInfo> pixels(resolution);
+    const double aspectRatio = resolutionWidth / resolutionHeight;
     for (size_t y = 0; y < resolution.y(); ++y) {
       for (size_t x = 0; x < resolution.x(); ++x) {
         // get the center of the pixel;
-        double world_x = x + .5;
-        double world_y = y + .5;
+        double world_x = static_cast<double>(x) + .5;
+        double world_y = static_cast<double>(y) + .5;
 
         // convert to Normalised Device Coordinate space
-        world_x /= resolution.x();
-        world_y /= resolution.y();
+        world_x /= resolutionWidth;
+        world_y /= resolutionHeight;
 
         // convert to Screen space
         world_x = world_x * 2 - 1;
         world_y = 1 - world_y * 2;
 
         // align to aspect ratio
-        world_x *= double(resolution.x()) / resolution.y();
+        world_x *= aspectRatio;
         vec3<double> direction({world_x, world_y, -1.0});
         direction.normalise();
         direction = direction * orientation_;
         Ray ray{position_, direction};
         double steps = std::numeric_limits<double>::infinity();
-        Color triangleColor;
         Triangle tri;
         for (size_t j = 0; j < meshes.size(); ++j) {
           for (size_t i = 0; i < meshes[j].indicies().size(); ++i) {
@@ -832,38 +775,19 @@ public:
               continue;
             if (stepsTmp < steps) {
               steps = stepsTmp;
-              triangleColor = randomTriangleColors[j][i];
               tri = triangleTmp;
             }
           }
         }
-        pixels.get(x, y).ray = ray;
-        if (steps != std::numeric_limits<double>::infinity()) {
-          if (steps > maxStep)
-            maxStep = steps;
-          pixels.get(x, y).hit = true;
-          pixels.get(x, y).triangle = tri;
-          pixels.get(x, y).raySteps = steps;
-        } else {
-          pixels.get(x, y).hit = false;
-        }
-      }
-    }
-
-    for (size_t y = 0; y < resolution.y(); ++y) {
-      for (size_t x = 0; x < resolution.x(); ++x) {
-        if (pixels.get(x, y).hit == false) {
+        if (steps == std::numeric_limits<double>::infinity()) {
           image << static_cast<u32>(backgroundColor.x() * 255) << " "
                 << static_cast<u32>(backgroundColor.y() * 255) << " "
                 << static_cast<u32>(backgroundColor.z() * 255) << " ";
         } else {
           // image << Colors::White << " ";
-          // image << triangleColor << " ";
-          // image << Colors::White * (1 - dotProduct(triangle.normal(),
-          // ray.direction())) << " "; image << triangleColor * (1 -
-          // dotProduct(tri.normal(), ray.direction())) << " ";
+          // image << randomColor() << " ";
           image << Colors::White *
-                       (1 - pixels.get(x, y).raySteps / (maxStep * 2))
+                       (1 - dotProduct(tri.normal(), ray.direction()))
                 << " ";
         }
       }
@@ -879,8 +803,8 @@ class Scene {
   class Settings {
     vec3<double> backgroundColor_;
     struct ImageSettings {
-      u32 width;
-      u32 height;
+      size_t width;
+      size_t height;
     } imageSettings_;
 
   public:
@@ -910,7 +834,7 @@ public:
   [[nodiscard]] static Scene loadScene(const std::string &filename) {
     FILE *fp = fopen(filename.c_str(), "rb");
     if (!fp) {
-      throw "Failed to open the scene file: " + filename;
+      throw std::runtime_error("Failed to open the scene file: " + filename);
     }
 
     char fileBuffer[65536];
@@ -934,16 +858,19 @@ public:
         arrToVec3(bgc),
         document["settings"]["image_settings"]["width"].GetUint(),
         document["settings"]["image_settings"]["height"].GetUint()};
-    const rapidjson::Value &cameraSerttings = document["camera"];
-    Camera camera = {arrToVec3(cameraSerttings["position"]),
-                     arrToMatrix3x3(cameraSerttings["matrix"])};
+    const rapidjson::Value &cameraSettings = document["camera"];
+    Camera camera = {arrToVec3(cameraSettings["position"]),
+                     arrToMatrix3x3(cameraSettings["matrix"])};
     std::vector<Mesh> meshes;
     const rapidjson::Value &meshesJson = document["objects"];
     std::vector<vec3<double>> vertices;
     std::vector<vec3<size_t>> indicies;
     for (auto &object : meshesJson.GetArray()) {
       if (object["vertices"].Size() % 3 != 0) {
-        throw;
+        fclose(fp);
+        throw std::runtime_error(
+            "Invalid vertices data in scene file: Array root.objects.vertices "
+            "length is not a multiple of 3!");
       }
       for (auto itr = object["vertices"].Begin();
            itr != object["vertices"].End();) {
@@ -953,7 +880,10 @@ public:
         vertices.emplace_back(x, y, z);
       }
       if (object["triangles"].Size() % 3 != 0) {
-        throw;
+        fclose(fp);
+        throw std::runtime_error(
+            "Invalid triangle vertex indecies data in scene file: Array "
+            "root.objects.triangles length is not a multiple of 3!");
       }
       for (auto itr = object["triangles"].Begin();
            itr != object["triangles"].End();) {
@@ -966,8 +896,8 @@ public:
       vertices.clear();
       indicies.clear();
     }
-    auto test = filename.find('.');
-    const auto startPos = filename[0] == '.' ? 2 : 0;
+    fclose(fp);
+    const std::string::size_type startPos = filename[0] == '.' ? 2 : 0;
     Scene scene{
         std::move(settings), std::move(camera), std::move(meshes),
         filename.substr(startPos, filename.find('.', startPos) - startPos)};
@@ -978,7 +908,6 @@ public:
 
   void cameraTakeSnapshot() const {
     camera_.takeSnapshot(
-        // fileName_ + ".ppm",
         "render.ppm",
         {settings_.imageSettings().width, settings_.imageSettings().height},
         meshes_, settings_.backgroundColor());
@@ -986,7 +915,6 @@ public:
 
   void cameraTakeSnapshot(const std::string &outFileName) const {
     camera_.takeSnapshot(
-        // fileName_ + ".ppm",
         outFileName,
         {settings_.imageSettings().width, settings_.imageSettings().height},
         meshes_, settings_.backgroundColor());
