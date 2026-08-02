@@ -519,6 +519,30 @@ public:
   }
 };
 
+class Sphere {
+  vec3<double> position_;
+  double radius_;
+
+public:
+  Sphere(const vec3<double> &position = vec3<double>::zero(),
+         double radius = .1)
+      : position_(position), radius_(radius) {}
+
+  [[nodiscard]] double intersects(const Ray &ray) const noexcept {
+    const auto rayOriginToCenter = position_ - ray.origin();
+    const auto steps = dotProduct(ray.direction(), rayOriginToCenter);
+    if (steps < 0) {
+      if ((position_ - ray.origin()).lengthSquared() < radius_ * radius_)
+        return 0.; // ray origin inside sphere
+      return std::numeric_limits<double>::quiet_NaN();
+    }
+    if ((position_ - steps * ray.direction()).lengthSquared() <
+        radius_ * radius_)
+      return steps;
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+};
+
 template <typename T>
   requires Numeric<T>
 class Matrix3x3 {
@@ -648,6 +672,19 @@ public:
   }
 };
 
+class Light {
+  double intensity_;
+  vec3<double> position_;
+
+public:
+  Light(double intensity = 10,
+        const vec3<double> &position = vec3<double>::zero())
+      : intensity_(intensity), position_(position) {}
+
+  [[nodiscard]] auto intensity() const noexcept { return intensity_; }
+  [[nodiscard]] auto position() const noexcept { return position_; }
+};
+
 class Camera {
   vec3<double> position_;
   Matrix3x3<double> orientation_;
@@ -748,31 +785,73 @@ public:
         // align to aspect ratio
         world_x *= aspectRatio;
         vec3<double> direction({world_x, world_y, -1.0});
-        direction.normalise();
         direction = direction * orientation_;
         Ray ray{position_, direction};
         double steps = std::numeric_limits<double>::infinity();
-        Triangle tri;
+        Triangle triangle;
+        vec3<double> triangleNormal;
         for (size_t j = 0; j < meshes.size(); ++j) {
           for (size_t i = 0; i < meshes[j].indicies().size(); ++i) {
-            const auto triangleTmp = meshes[j].getTriangle(meshes[j].indicies()[i]);
-            const auto stepsTmp = triangleTmp.intersects(ray, meshes[j].normals()[i]);
+            const auto triangleTmp =
+                meshes[j].getTriangle(meshes[j].indicies()[i]);
+            const auto stepsTmp =
+                triangleTmp.intersects(ray, meshes[j].normals()[i]);
             if (std::isnan(stepsTmp))
               continue;
             if (stepsTmp < steps) {
               steps = stepsTmp;
-              tri = triangleTmp;
+              triangle = triangleTmp;
+              triangleNormal = meshes[j].normals()[i];
             }
           }
         }
+// #define RENDER_LIGHT_SOURCES
+#ifdef RENDER_LIGHT_SOURCES
+        bool lightHit = false;
+        for (size_t j = 0; j < lights.size(); ++j) {
+          const auto stepsLight = Sphere{lights[j].position()}.intersects(ray);
+          if (std::isnan(stepsLight))
+            continue;
+          if (stepsLight < steps) {
+            steps = stepsLight;
+            lightHit = true;
+          }
+        }
+#endif // RENDER_LIGHT_SOURCES
         if (steps == std::numeric_limits<double>::infinity()) {
           image << backgroundColor.getU8View() << " ";
         } else {
+// #define LIGHT_MULTIPLIER (1./255.)
+#define LIGHT_MULTIPLIER 1.
+#define CUSTOM_ALBEDO Color{255, 255, 255}
+          double pixelLightReached = 0;
+#ifdef RENDER_LIGHT_SOURCES
+          if (lightHit) {
+            image << Colors::Yellow.getU8View() << " ";
+            continue;
+          }
+#endif // RENDER_LIGHT_SOURCES
+          for (const auto &light : lights) {
+            const auto hitPoint = ray.origin() + steps * ray.direction();
+            // const auto hitPointFloatingErrCorrection = hitPoint +
+            // ray.direction();
+            const auto rayToLight = Ray{hitPoint, light.position() - hitPoint};
+            const auto cosineLawFactor = std::max(
+                0., dotProduct(rayToLight.direction(), triangleNormal));
+            pixelLightReached += cosineLawFactor;
+            // if (dotProduct(rayToLight.direction(), triangleNormal) > 0) {
+            //   const auto intensityAfterDistance = light.intensity() -
+            //   (light.position() - hitPoint).length(); if
+            //   (intensityAfterDistance > 0)
+            //     pixelLightReached += intensityAfterDistance;
+            // }
+          }
           // image << Colors::White << " ";
           // image << randomColor() << " ";
-          image << Colors::White *
-                       (1 - dotProduct(tri.normal(), ray.direction()))
-                << " ";
+          // image << Colors::White *
+          //              (1 - dotProduct(triangle.normal(), ray.direction()))
+          //       << " ";
+          image << (Colors::White * pixelLightReached).getU8View() << " ";
         }
       }
     }
@@ -807,11 +886,12 @@ class Scene {
   Settings settings_;
   Camera camera_;
   std::vector<Mesh> meshes_;
+  std::vector<Light> lights_;
   std::string fileName_;
 
   Scene(Settings &&settings, Camera &&camera, std::vector<Mesh> &&meshes,
-        std::string &&fileName)
-      : settings_{settings}, camera_{camera}, meshes_{meshes},
+        std::vector<Light> &&lights, std::string &&fileName)
+      : settings_{settings}, camera_{camera}, meshes_{meshes}, lights_(lights),
         fileName_(fileName) {}
 
 public:
@@ -840,6 +920,7 @@ public:
     rapidjson::FileReadStream is(fp, fileBuffer, sizeof(fileBuffer));
     rapidjson::Document document;
     document.ParseStream(is);
+    // TODO: Implement error handling for json parsing
     const rapidjson::Value &bgc = document["settings"]["background_color"];
     Settings settings = {
         arrToColorObject(bgc),
@@ -883,10 +964,30 @@ public:
       vertices.clear();
       indicies.clear();
     }
+    const rapidjson::Value &lightsJson = document["lights"];
+    std::vector<Light> lights;
+    double intensity;
+    vec3<double> position;
+    for (auto &light : lightsJson.GetArray()) {
+      if (light["position"].Size() != 3) {
+        fclose(fp);
+        // TODO: show exact lights array index when implementing error handling
+        // for every step of the parsing
+        throw std::runtime_error(
+            "Invalid crtscene file, root.lights[?].position is not an array of "
+            "3 numbers");
+      }
+      intensity = light["intensity"].GetDouble();
+      const auto &positionJson = light["position"];
+      position = {positionJson[0].GetDouble(), positionJson[1].GetDouble(),
+                  positionJson[2].GetDouble()};
+      lights.emplace_back(intensity, position);
+    }
     fclose(fp);
     const std::string::size_type startPos = filename[0] == '.' ? 2 : 0;
     Scene scene{
         std::move(settings), std::move(camera), std::move(meshes),
+        std::move(lights),
         filename.substr(startPos, filename.find('.', startPos) - startPos)};
     return scene;
   }
