@@ -130,6 +130,10 @@ public:
     return std::sqrt(x_ * x_ + y_ * y_ + z_ * z_);
   }
 
+  [[nodiscard]] constexpr T lengthSquared() const noexcept {
+    return x_ * x_ + y_ * y_ + z_ * z_;
+  }
+
   constexpr vec3<T> &normalise() noexcept {
     double _length = length();
     if (_length != 0) {
@@ -441,9 +445,9 @@ public:
   // returns the distance from the ray origin to the intersection point, or NaN
   // if the ray doesn't intersect the triangle.
   constexpr Ray(vec3<double> origin, vec3<double> direction) noexcept
-      : origin_(origin), direction_(direction) {}
+      : origin_(origin), direction_(direction.normalise()) {}
   constexpr Ray() noexcept
-      : origin_(vec3<double>::zero()), direction_(vec3<double>::zero()) {}
+      : origin_(vec3<double>::zero()), direction_(vec3<double>::NEG_Z()) {}
 
   [[nodiscard]] constexpr vec3<double> origin() noexcept { return origin_; }
   [[nodiscard]] constexpr vec3<double> direction() noexcept {
