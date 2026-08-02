@@ -502,9 +502,6 @@ public:
   intersects(const Ray &ray, const vec3<double> &normal) const noexcept {
     const auto rayStep = dotProduct(ray.direction(), normal);
     const auto planeDistance = dotProduct(point1() - ray.origin(), normal);
-    if (rayStep >= 0) {
-      return std::numeric_limits<double>::quiet_NaN();
-    }
     double tSteps = planeDistance / rayStep;
     vec3<double> pointPlaneIntersection =
         ray.origin() + tSteps * ray.direction();
