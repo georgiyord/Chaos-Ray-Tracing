@@ -2,6 +2,7 @@
 #define __UTILS_CRT
 
 #include <cmath>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -330,40 +331,105 @@ public:
   }
 };
 
-using Color = vec3<u8>;
+class Color {
+  double r, g, b;
+
+  [[nodiscard]] constexpr static double clampChannel(double channel) noexcept {
+    if (channel > 1.)
+      return 1.;
+    return channel;
+  }
+
+  // TODO: Change later to instead take number of bits per each channel (or
+  // different for each channel) ColorView does not update automatically with
+  // Color, currently a new ColorView needs to be generated for an update Color
+  template <typename T>
+    requires std::same_as<T, u16> || std::same_as<T, u8>
+  class ColorView {
+    const Color &color_;
+
+    [[nodiscard]] constexpr T parseChannel(double channel) const noexcept {
+      return static_cast<T>(std::round(Color::clampChannel(channel) *
+                                       std::numeric_limits<T>::max()));
+    }
+
+    T red = parseChannel(color_.r);
+    T green = parseChannel(color_.g);
+    T blue = parseChannel(color_.b);
+
+  public:
+    inline friend std::ostream &operator<<(std::ostream &os, ColorView<T> cv) {
+      os << static_cast<u32>(cv.red) << " " << static_cast<u32>(cv.green) << " "
+         << static_cast<u32>(cv.blue);
+      return os;
+    }
+    constexpr ColorView(const Color &color) : color_(color) {}
+  };
+
+public:
+  constexpr Color(double red = 0., double green = 0., double blue = 0.)
+      : r(red), g(green), b(blue) {
+    r = r < 0. ? 0. : r;
+    g = g < 0. ? 0. : g;
+    b = b < 0. ? 0. : b;
+  }
+
+  [[nodiscard]] constexpr auto getU8View() const noexcept {
+    return ColorView<u8>(*this);
+  }
+  [[nodiscard]] constexpr auto getU16View() const noexcept {
+    return ColorView<u16>(*this);
+  }
+
+  [[nodiscard]] friend constexpr Color operator*(const Color &c,
+                                                 double val) noexcept {
+    return Color{c.r * val, c.g * val, c.b * val};
+  }
+  [[nodiscard]] friend constexpr Color operator*(double val,
+                                                 const Color &c) noexcept {
+    return Color{c.r * val, c.g * val, c.b * val};
+  }
+  friend constexpr Color &operator*=(Color &c, double val) noexcept {
+    c.r *= val;
+    c.g *= val;
+    c.b *= val;
+    return c;
+  }
+};
 
 namespace Colors {
-constexpr Color Black = Color(0, 0, 0);
-constexpr Color Red = Color(255, 0, 0);
-constexpr Color Green = Color(0, 255, 0);
-constexpr Color Blue = Color(0, 0, 255);
-constexpr Color Yellow = Color(255, 255, 0);
-constexpr Color Cyan = Color(0, 255, 255);
-constexpr Color Purple = Color(255, 0, 255);
-constexpr Color White = Color(255, 255, 255);
+constexpr Color Black = Color(0., 0., 0.);
+constexpr Color Red = Color(1., 0., 0.);
+constexpr Color Green = Color(0., 1., 0.);
+constexpr Color Blue = Color(0., 0., 1.);
+constexpr Color Yellow = Color(1., 1., 0.);
+constexpr Color Cyan = Color(0., 1., 1.);
+constexpr Color Purple = Color(1., 0., 1.);
+constexpr Color White = Color(1., 1., 1.);
 }; // namespace Colors
 
 [[nodiscard]] inline Color randomColor() {
   static std::random_device rd;
   static std::mt19937 gen(rd());
-  static std::uniform_int_distribution<u32> dist(0, 6 * 256 - 1);
+  static std::uniform_real_distribution<double> realDist(0., 1.);
+  static std::uniform_int_distribution<u8> intDist(0, 5);
 
-  u32 rng = dist(gen);
-  u8 secondaryValue = static_cast<u8>(rng % 256);
+  u8 variation = intDist(gen);
+  double offset = realDist(gen);
 
-  switch (rng / 256) {
+  switch (variation) {
   case 0:
-    return Color{255, secondaryValue, 0};
+    return Color{1., offset, 0.};
   case 1:
-    return Color{static_cast<u8>(255 - secondaryValue), 255, 0};
+    return Color{1. - offset, 1., 0.};
   case 2:
-    return Color{0, 255, secondaryValue};
+    return Color{0., 1., offset};
   case 3:
-    return Color{0, static_cast<u8>(255 - secondaryValue), 255};
+    return Color{0., 1. - offset, 1.};
   case 4:
-    return Color{secondaryValue, 0, 255};
+    return Color{offset, 0., 1.};
   default:
-    return Color{255, 0, static_cast<u8>(255 - secondaryValue)};
+    return Color{1., 0, 1. - offset};
   }
 }
 
@@ -403,7 +469,8 @@ public:
   constexpr Triangle(Point point1, Point point2, Point point3) noexcept
       : point1_(point1), point2_(point2), point3_(point3) {}
   constexpr Triangle() noexcept
-      : point1_(Point::zero()), point2_(Point::zero()), point3_(Point::zero()) {}
+      : point1_(Point::zero()), point2_(Point::zero()), point3_(Point::zero()) {
+  }
 
   [[nodiscard]] constexpr Point normal() const noexcept {
     const Point vec1 = point2_ - point1_;
@@ -427,21 +494,25 @@ public:
     point3_ = p3;
   }
 
-
-  [[nodiscard]] constexpr double intersects(const Ray &ray, const vec3<double> &normal) const noexcept {
+  [[nodiscard]] constexpr double
+  intersects(const Ray &ray, const vec3<double> &normal) const noexcept {
     const auto rayStep = dotProduct(ray.direction(), normal);
     const auto planeDistance = dotProduct(point1() - ray.origin(), normal);
     if (rayStep >= 0) {
       return std::numeric_limits<double>::quiet_NaN();
     }
     double tSteps = planeDistance / rayStep;
-    vec3<double> pointPlaneIntersection = ray.origin() + tSteps * ray.direction();
+    vec3<double> pointPlaneIntersection =
+        ray.origin() + tSteps * ray.direction();
 
-    if (dotProduct(normal, crossProduct(point2() - point1(), pointPlaneIntersection - point1())) < 0)
+    if (dotProduct(normal, crossProduct(point2() - point1(),
+                                        pointPlaneIntersection - point1())) < 0)
       return std::numeric_limits<double>::quiet_NaN();
-    if (dotProduct(normal, crossProduct(point3() - point2(), pointPlaneIntersection - point2())) < 0)
+    if (dotProduct(normal, crossProduct(point3() - point2(),
+                                        pointPlaneIntersection - point2())) < 0)
       return std::numeric_limits<double>::quiet_NaN();
-    if (dotProduct(normal, crossProduct(point1() - point3(), pointPlaneIntersection - point3())) < 0)
+    if (dotProduct(normal, crossProduct(point1() - point3(),
+                                        pointPlaneIntersection - point3())) < 0)
       return std::numeric_limits<double>::quiet_NaN();
 
     return tSteps;
@@ -638,9 +709,10 @@ public:
 
   void takeSnapshot(const std::string &fileName, const vec2<size_t> &resolution,
                     const std::vector<Mesh> &meshes,
-                    const vec3<double> &backgroundColor) const {
+                    const std::vector<Light> &lights,
+                    const Color &backgroundColor) const {
     std::ofstream image(fileName, std::ios::trunc | std::ios::out);
-    if (!image.is_open()){
+    if (!image.is_open()) {
       throw std::runtime_error("Could not open " + fileName + " for writing!");
     }
     image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
@@ -694,9 +766,7 @@ public:
           }
         }
         if (steps == std::numeric_limits<double>::infinity()) {
-          image << static_cast<u32>(backgroundColor.x() * 255) << " "
-                << static_cast<u32>(backgroundColor.y() * 255) << " "
-                << static_cast<u32>(backgroundColor.z() * 255) << " ";
+          image << backgroundColor.getU8View() << " ";
         } else {
           // image << Colors::White << " ";
           // image << randomColor() << " ";
@@ -715,18 +785,18 @@ public:
 
 class Scene {
   class Settings {
-    vec3<double> backgroundColor_;
+    Color backgroundColor_;
     struct ImageSettings {
       size_t width;
       size_t height;
     } imageSettings_;
 
   public:
-    Settings(vec3<double> backgroundColor, size_t imageWidth,
-             size_t imageHeight)
+    Settings(Color backgroundColor, size_t imageWidth, size_t imageHeight)
         : backgroundColor_{backgroundColor},
           imageSettings_(imageWidth, imageHeight) {}
-    [[nodiscard]] vec3<double> backgroundColor() const noexcept {
+    [[nodiscard]] Color &backgroundColor() noexcept { return backgroundColor_; }
+    [[nodiscard]] const Color &backgroundColor() const noexcept {
       return backgroundColor_;
     }
     [[nodiscard]] ImageSettings imageSettings() const noexcept {
@@ -752,6 +822,9 @@ public:
     }
 
     char fileBuffer[65536];
+    const auto arrToColorObject = [](const rapidjson::Value &arr) {
+      return Color{arr[0].GetDouble(), arr[1].GetDouble(), arr[2].GetDouble()};
+    };
     const auto arrToVec3 = [](const rapidjson::Value &arr) {
       return vec3<double>{arr[0].GetDouble(), arr[1].GetDouble(),
                           arr[2].GetDouble()};
@@ -769,7 +842,7 @@ public:
     document.ParseStream(is);
     const rapidjson::Value &bgc = document["settings"]["background_color"];
     Settings settings = {
-        arrToVec3(bgc),
+        arrToColorObject(bgc),
         document["settings"]["image_settings"]["width"].GetUint(),
         document["settings"]["image_settings"]["height"].GetUint()};
     const rapidjson::Value &cameraSettings = document["camera"];
