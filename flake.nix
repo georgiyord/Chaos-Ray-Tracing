@@ -87,6 +87,23 @@
           driveFileId = "10xKWk2CkCDMWzuCD8dhHQg1c9UmM8DnY";
           hash = "sha256-Vmdyx0iW+t3w1Nu8v6wzRqZisWvioKLW1MJWKSDvqtg=";
         };
+
+        CRT08-Scene0 = fetchGoogleDrive {
+          driveFileId = "14F0LY6KnYAu7YeIKh5bGuu8k6Pt2bdmo";
+          hash = "sha256-hgykRFzhkEAk5tXGnsqvdmnSf/5RkLaDvb1nkmfuU3k=";
+        };
+        CRT08-Scene1 = fetchGoogleDrive {
+          driveFileId = "1-tXJm07NzMMyCFSq8PuyDPDw2Uj9yCWv";
+          hash = "sha256-2qEhcXmkymWc6FLlL+V4qU+O2/9qKT9Fg3Umq8nl1b4=";
+        };
+        CRT08-Scene2 = fetchGoogleDrive {
+          driveFileId = "1jnfGUgSW-NZE4iQXtkNQSj8EnVisQuF6";
+          hash = "sha256-kKm8MtrCROAtfzcp6zrIBk7PkhKXt+E7RcNXLRzF2V8=";
+        };
+        CRT08-Scene3 = fetchGoogleDrive {
+          driveFileId = "10WpZDl70ZdENGGxrythDj55QAkHuFZMK";
+          hash = "sha256-vBkpu4I/NJAQ1SGzFWxhbxYo67b1rjFj7ng/eCK6wHc=";
+        };
       };
     };
 }
