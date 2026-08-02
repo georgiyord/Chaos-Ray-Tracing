@@ -7,3 +7,5 @@ compile_commands.json
 perf*
 flamegraph*.html
 *.py
+result
+scene.ppm
