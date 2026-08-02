@@ -633,7 +633,7 @@ public:
       return parent_->getTriangle(*itr_);
     }
     ConstTriangleIterator &operator++() noexcept {
-      ++itr_; 
+      ++itr_;
       return *this;
     }
     bool operator!=(const ConstTriangleIterator &rhs) const noexcept {
@@ -879,7 +879,10 @@ class Scene {
     [[nodiscard]] const Color &backgroundColor() const noexcept {
       return backgroundColor_;
     }
-    [[nodiscard]] ImageSettings imageSettings() const noexcept {
+    [[nodiscard]] ImageSettings &imageSettings() noexcept {
+      return imageSettings_;
+    }
+    [[nodiscard]] const ImageSettings &imageSettings() const noexcept {
       return imageSettings_;
     }
   };
@@ -995,18 +998,25 @@ public:
 
   [[nodiscard]] Camera &camera() noexcept { return camera_; }
 
-  void cameraTakeSnapshot() const {
-    camera_.takeSnapshot(
-        "render.ppm",
-        {settings_.imageSettings().width, settings_.imageSettings().height},
-        meshes_, settings_.backgroundColor());
-  }
-
   void cameraTakeSnapshot(const std::string &outFileName) const {
     camera_.takeSnapshot(
         outFileName,
         {settings_.imageSettings().width, settings_.imageSettings().height},
-        meshes_, settings_.backgroundColor());
+        meshes_, lights_, settings_.backgroundColor());
+  }
+
+  [[nodiscard]] Settings settings() const noexcept { return settings_; }
+
+  void overwriteWidth(size_t width) noexcept {
+    settings_.imageSettings().width = width;
+  }
+
+  void overwriteHeight(size_t height) noexcept {
+    settings_.imageSettings().height = height;
+  }
+
+  void overwriteBackgoroundColor(const Color &c) noexcept {
+    settings_.backgroundColor() = c;
   }
 };
 
