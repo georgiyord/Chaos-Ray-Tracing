@@ -1,11 +1,13 @@
-#ifndef __UTILS_CRT
-#define __UTILS_CRT
+#ifndef UTILS_CRT_HPP
+#define UTILS_CRT_HPP
 
 #include <cmath>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <algorithm>
+#include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
@@ -13,6 +15,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <numbers>
 #include <ostream>
 #include <random>
 #include <rapidjson/document.h>
@@ -135,12 +138,17 @@ public:
   }
 
   constexpr vec3<T> &normalise() noexcept {
-    double _length = length();
-    if (_length != 0) {
-      x_ /= _length;
-      y_ /= _length;
-      z_ /= _length;
-    }
+    double _length = lengthSquared();
+    if (_length == 0)
+      return *this;
+    // TODO: check if floating point errors reduce the effectiveness of a simple
+    // == comparison
+    if (_length == 1)
+      return *this;
+    _length = sqrt(_length);
+    x_ /= _length;
+    y_ /= _length;
+    z_ /= _length;
     return *this;
   }
 
@@ -373,9 +381,13 @@ class Color {
 public:
   constexpr Color(double red = 0., double green = 0., double blue = 0.)
       : r(red), g(green), b(blue) {
-    r = r < 0. ? 0. : r;
-    g = g < 0. ? 0. : g;
-    b = b < 0. ? 0. : b;
+    if (red < 0. || green < 0. || blue < 0.)
+      throw std::runtime_error("Color values cannot be negative");
+  }
+
+  constexpr Color(double grayValue) : r(grayValue), g(grayValue), b(grayValue) {
+    if (grayValue < 0.)
+      throw std::runtime_error("Color values cannot be negative");
   }
 
   [[nodiscard]] constexpr auto getU8View() const noexcept {
@@ -385,19 +397,29 @@ public:
     return ColorView<u16>(*this);
   }
 
-  [[nodiscard]] friend constexpr Color operator*(const Color &c,
-                                                 double val) noexcept {
+  [[nodiscard]] friend constexpr Color operator*(const Color &c, double val) {
+    if (val < 0.)
+      throw std::runtime_error("Color values cannot be negative");
     return Color{c.r * val, c.g * val, c.b * val};
   }
-  [[nodiscard]] friend constexpr Color operator*(double val,
-                                                 const Color &c) noexcept {
+  [[nodiscard]] friend constexpr Color operator*(double val, const Color &c) {
+    if (val < 0.)
+      throw std::runtime_error("Color values cannot be negative");
     return Color{c.r * val, c.g * val, c.b * val};
   }
-  friend constexpr Color &operator*=(Color &c, double val) noexcept {
+  friend constexpr Color &operator*=(Color &c, double val) {
+    if (val < 0.)
+      throw std::runtime_error("Color values cannot be negative");
     c.r *= val;
     c.g *= val;
     c.b *= val;
     return c;
+  }
+
+  constexpr static Color createGrayscale(double value) {
+    if (value < 0.)
+      throw std::runtime_error("Color values cannot be negative");
+    return Color{value, value, value};
   }
 };
 
@@ -500,21 +522,27 @@ public:
 
   [[nodiscard]] constexpr double
   intersects(const Ray &ray, const vec3<double> &normal) const noexcept {
+    const auto &NaN = std::numeric_limits<double>::quiet_NaN();
     const auto rayStep = dotProduct(ray.direction(), normal);
+    if (rayStep == 0)
+      return NaN;
     const auto planeDistance = dotProduct(point1() - ray.origin(), normal);
     double tSteps = planeDistance / rayStep;
+
+    if (tSteps < 0)
+      return NaN;
     vec3<double> pointPlaneIntersection =
         ray.origin() + tSteps * ray.direction();
 
     if (dotProduct(normal, crossProduct(point2() - point1(),
                                         pointPlaneIntersection - point1())) < 0)
-      return std::numeric_limits<double>::quiet_NaN();
+      return NaN;
     if (dotProduct(normal, crossProduct(point3() - point2(),
                                         pointPlaneIntersection - point2())) < 0)
-      return std::numeric_limits<double>::quiet_NaN();
+      return NaN;
     if (dotProduct(normal, crossProduct(point1() - point3(),
                                         pointPlaneIntersection - point3())) < 0)
-      return std::numeric_limits<double>::quiet_NaN();
+      return NaN;
 
     return tSteps;
   }
@@ -551,7 +579,7 @@ class Matrix3x3 {
   T arr_[3][3];
 
 public:
-  constexpr Matrix3x3() noexcept {}
+  constexpr Matrix3x3() noexcept : arr_{} {}
   constexpr Matrix3x3(T M0x0, T M0x1, T M0x2, T M1x0, T M1x1, T M1x2, T M2x0,
                       T M2x1, T M2x2) noexcept
       : arr_{{M0x0, M0x1, M0x2}, {M1x0, M1x1, M1x2}, {M2x0, M2x1, M2x2}} {}
@@ -643,33 +671,33 @@ public:
 
 private:
   std::vector<vec3<double>> vertices_;
-  std::vector<vec3<size_t>> indicies_;
+  std::vector<vec3<size_t>> indices_;
   std::vector<vec3<double>>
       normals_; // cache normals so they don't get calculated for each pixel
                 // while rendering
 
 public:
-  Mesh(std::vector<vec3<double>> &&verticies,
-       std::vector<vec3<size_t>> indicies)
-      : vertices_{std::move(verticies)}, indicies_{std::move(indicies)} {
-    for (const auto &vertexIndicies : indicies_) {
-      normals_.emplace_back(getTriangle(vertexIndicies).normal());
+  Mesh(std::vector<vec3<double>> &&vertices,
+       std::vector<vec3<size_t>> indices)
+      : vertices_{std::move(vertices)}, indices_{std::move(indices)} {
+    for (const auto &vertexIndices : indices_) {
+      normals_.emplace_back(getTriangle(vertexIndices).normal());
     }
   }
   ConstTriangleIterator begin() const noexcept {
-    return ConstTriangleIterator{*this, indicies_.cbegin()};
+    return ConstTriangleIterator{*this, indices_.cbegin()};
   }
   ConstTriangleIterator end() const noexcept {
-    return ConstTriangleIterator{*this, indicies_.cend()};
+    return ConstTriangleIterator{*this, indices_.cend()};
   }
-  [[nodiscard]] const auto &indicies() const noexcept { return indicies_; }
+  [[nodiscard]] const auto &indices() const noexcept { return indices_; }
   [[nodiscard]] const auto &vertices() const noexcept { return vertices_; }
   [[nodiscard]] const auto &normals() const noexcept { return normals_; }
 
   [[nodiscard]] Triangle
-  getTriangle(const vec3<size_t> &indicies) const noexcept {
-    return Triangle{vertices_[indicies.x()], vertices_[indicies.y()],
-                    vertices_[indicies.z()]};
+  getTriangle(const vec3<size_t> &indices) const noexcept {
+    return Triangle{vertices_[indices.x()], vertices_[indices.y()],
+                    vertices_[indices.z()]};
   }
 };
 
@@ -792,9 +820,9 @@ public:
         Triangle triangle;
         vec3<double> triangleNormal;
         for (size_t j = 0; j < meshes.size(); ++j) {
-          for (size_t i = 0; i < meshes[j].indicies().size(); ++i) {
+          for (size_t i = 0; i < meshes[j].indices().size(); ++i) {
             const auto triangleTmp =
-                meshes[j].getTriangle(meshes[j].indicies()[i]);
+                meshes[j].getTriangle(meshes[j].indices()[i]);
             const auto stepsTmp =
                 triangleTmp.intersects(ray, meshes[j].normals()[i]);
             if (std::isnan(stepsTmp))
@@ -822,9 +850,6 @@ public:
         if (steps == std::numeric_limits<double>::infinity()) {
           image << backgroundColor.getU8View() << " ";
         } else {
-// #define LIGHT_MULTIPLIER (1./255.)
-#define LIGHT_MULTIPLIER 1.
-#define CUSTOM_ALBEDO Color{255, 255, 255}
           double pixelLightReached = 0;
 #ifdef RENDER_LIGHT_SOURCES
           if (lightHit) {
@@ -834,25 +859,51 @@ public:
 #endif // RENDER_LIGHT_SOURCES
           for (const auto &light : lights) {
             const auto hitPoint = ray.origin() + steps * ray.direction();
-            // const auto hitPointFloatingErrCorrection = hitPoint +
-            // ray.direction();
-            const auto rayToLight = Ray{hitPoint, light.position() - hitPoint};
+            const vec3<double> pointToLightSourceVec =
+                light.position() - hitPoint;
+            vec3<double> pointToLightSourceVecNormalised =
+                pointToLightSourceVec;
+            pointToLightSourceVecNormalised.normalise();
+            const double side =
+                dotProduct(pointToLightSourceVecNormalised, triangleNormal) < 0.
+                    ? -1.
+                    : 1.;
+            const vec3<double> shadingNormal = side * triangleNormal;
             const auto cosineLawFactor = std::max(
-                0., dotProduct(rayToLight.direction(), triangleNormal));
-            pixelLightReached += cosineLawFactor;
-            // if (dotProduct(rayToLight.direction(), triangleNormal) > 0) {
-            //   const auto intensityAfterDistance = light.intensity() -
-            //   (light.position() - hitPoint).length(); if
-            //   (intensityAfterDistance > 0)
-            //     pixelLightReached += intensityAfterDistance;
-            // }
+                0., dotProduct(pointToLightSourceVecNormalised, shadingNormal));
+            auto tmpLight =
+                light.intensity() /
+                (4 * std::numbers::pi * pointToLightSourceVec.lengthSquared()) *
+                cosineLawFactor;
+
+            const double shadowBias = 1e-4;
+            const Ray shadowRay{
+                hitPoint + shadingNormal * shadowBias,
+                pointToLightSourceVec};
+            bool shadowRayIntersection = false;
+            for (size_t j = 0; j < meshes.size(); ++j) {
+              for (size_t i = 0; i < meshes[j].indices().size(); ++i) {
+                const auto triangleTmp =
+                    meshes[j].getTriangle(meshes[j].indices()[i]);
+                const auto stepsTmp =
+                    triangleTmp.intersects(shadowRay, meshes[j].normals()[i]);
+                if (std::isnan(stepsTmp))
+                  continue;
+                if (stepsTmp * stepsTmp > pointToLightSourceVec.lengthSquared())
+                  continue;
+                shadowRayIntersection = true;
+                tmpLight = 0;
+                break;
+              }
+              if (shadowRayIntersection)
+                break;
+            }
+            pixelLightReached += tmpLight;
           }
-          // image << Colors::White << " ";
-          // image << randomColor() << " ";
-          // image << Colors::White *
-          //              (1 - dotProduct(triangle.normal(), ray.direction()))
-          //       << " ";
-          image << (Colors::White * pixelLightReached).getU8View() << " ";
+          const Color albedo{.33, .25, .33};
+          const double LIGHT_EXPOSURE = 1;
+          image << (albedo * pixelLightReached * LIGHT_EXPOSURE).getU8View()
+                << " ";
         }
       }
     }
@@ -891,12 +942,11 @@ class Scene {
   Camera camera_;
   std::vector<Mesh> meshes_;
   std::vector<Light> lights_;
-  std::string fileName_;
 
   Scene(Settings &&settings, Camera &&camera, std::vector<Mesh> &&meshes,
-        std::vector<Light> &&lights, std::string &&fileName)
-      : settings_{settings}, camera_{camera}, meshes_{meshes}, lights_(lights),
-        fileName_(fileName) {}
+        std::vector<Light> &&lights)
+      : settings_{std::move(settings)}, camera_{std::move(camera)},
+        meshes_{std::move(meshes)}, lights_{std::move(lights)} {}
 
 public:
   [[nodiscard]] static Scene loadScene(const std::string &filename) {
@@ -924,75 +974,152 @@ public:
     rapidjson::FileReadStream is(fp, fileBuffer, sizeof(fileBuffer));
     rapidjson::Document document;
     document.ParseStream(is);
-    // TODO: Implement error handling for json parsing
-    const rapidjson::Value &bgc = document["settings"]["background_color"];
-    Settings settings = {
-        arrToColorObject(bgc),
-        document["settings"]["image_settings"]["width"].GetUint(),
-        document["settings"]["image_settings"]["height"].GetUint()};
-    const rapidjson::Value &cameraSettings = document["camera"];
+    if (document.HasParseError()) {
+      throw std::runtime_error("Failed to parse the scene file: " + filename);
+    }
+    if (!document.IsObject()) {
+      throw std::runtime_error("Invalid crtscene file: root is not an object");
+    }
+
+    const auto requireObjectMember = [&document](const char *key)
+        -> const rapidjson::Value & {
+      const auto member = document.FindMember(key);
+      if (member == document.MemberEnd() || !member->value.IsObject()) {
+        throw std::runtime_error("Invalid crtscene file: root." +
+                                 std::string(key) + " is missing or not an "
+                                 "object");
+      }
+      return member->value;
+    };
+    const auto requireArrayMember = [&document](const char *key)
+        -> const rapidjson::Value & {
+      const auto member = document.FindMember(key);
+      if (member == document.MemberEnd() || !member->value.IsArray()) {
+        throw std::runtime_error("Invalid crtscene file: root." +
+                                 std::string(key) +
+                                 " is missing or not an array");
+      }
+      return member->value;
+    };
+    const auto requireArrayOfSize = [](const rapidjson::Value &value,
+                                       size_t size,
+                                       const std::string &description) -> void {
+      if (!value.IsArray() || value.Size() != size) {
+        throw std::runtime_error("Invalid crtscene file: " + description +
+                                 " is not an array of " +
+                                 std::to_string(size) + " numbers");
+      }
+    };
+    const auto requireMemberArrayOfSize = [&requireArrayOfSize](
+                                              const rapidjson::Value &object,
+                                              const char *key, size_t size,
+                                              const std::string &description) {
+      const auto member = object.FindMember(key);
+      if (member == object.MemberEnd() || !member->value.IsArray()) {
+        throw std::runtime_error("Invalid crtscene file: " + description +
+                                 " is missing or not an array");
+      }
+      requireArrayOfSize(member->value, size, description);
+    };
+
+    const rapidjson::Value &settingsJson = requireObjectMember("settings");
+    requireMemberArrayOfSize(settingsJson, "background_color", 3,
+                             "root.settings.background_color");
+    const auto imageSettingsMember = settingsJson.FindMember("image_settings");
+    if (imageSettingsMember == settingsJson.MemberEnd() ||
+        !imageSettingsMember->value.IsObject()) {
+      throw std::runtime_error(
+          "Invalid crtscene file: root.settings.image_settings is missing or "
+          "not an object");
+    }
+    const rapidjson::Value &imageSettings = imageSettingsMember->value;
+    const auto widthMember = imageSettings.FindMember("width");
+    const auto heightMember = imageSettings.FindMember("height");
+    if (widthMember == imageSettings.MemberEnd() ||
+        !widthMember->value.IsUint() ||
+        heightMember == imageSettings.MemberEnd() ||
+        !heightMember->value.IsUint()) {
+      throw std::runtime_error(
+          "Invalid crtscene file: root.settings.image_settings needs unsigned "
+          "'width' and 'height'");
+    }
+    Settings settings = {arrToColorObject(settingsJson["background_color"]),
+                         widthMember->value.GetUint(),
+                         heightMember->value.GetUint()};
+
+    const rapidjson::Value &cameraSettings = requireObjectMember("camera");
+    requireMemberArrayOfSize(cameraSettings, "position", 3,
+                             "root.camera.position");
+    requireMemberArrayOfSize(cameraSettings, "matrix", 9, "root.camera.matrix");
     Camera camera = {arrToVec3(cameraSettings["position"]),
                      arrToMatrix3x3(cameraSettings["matrix"])};
+
     std::vector<Mesh> meshes;
-    const rapidjson::Value &meshesJson = document["objects"];
+    const rapidjson::Value &meshesJson = requireArrayMember("objects");
     std::vector<vec3<double>> vertices;
-    std::vector<vec3<size_t>> indicies;
-    for (auto &object : meshesJson.GetArray()) {
-      if (object["vertices"].Size() % 3 != 0) {
-        fclose(fp);
+    std::vector<vec3<size_t>> indices;
+    for (const auto &object : meshesJson.GetArray()) {
+      const auto verticesMember = object.FindMember("vertices");
+      const auto trianglesMember = object.FindMember("triangles");
+      if (verticesMember == object.MemberEnd() ||
+          !verticesMember->value.IsArray() ||
+          trianglesMember == object.MemberEnd() ||
+          !trianglesMember->value.IsArray()) {
         throw std::runtime_error(
-            "Invalid vertices data in scene file: Array root.objects.vertices "
-            "length is not a multiple of 3!");
+            "Invalid crtscene file: every root.objects entry needs 'vertices' "
+            "and 'triangles' arrays");
       }
-      for (auto itr = object["vertices"].Begin();
-           itr != object["vertices"].End();) {
+      const rapidjson::Value &verticesJson = verticesMember->value;
+      const rapidjson::Value &trianglesJson = trianglesMember->value;
+      if (verticesJson.Size() % 3 != 0) {
+        throw std::runtime_error(
+            "Invalid crtscene file: root.objects.vertices length is not a "
+            "multiple of 3!");
+      }
+      for (auto itr = verticesJson.Begin(); itr != verticesJson.End();) {
         const double x = itr++->GetDouble();
         const double y = itr++->GetDouble();
         const double z = itr++->GetDouble();
         vertices.emplace_back(x, y, z);
       }
-      if (object["triangles"].Size() % 3 != 0) {
-        fclose(fp);
+      if (trianglesJson.Size() % 3 != 0) {
         throw std::runtime_error(
-            "Invalid triangle vertex indecies data in scene file: Array "
-            "root.objects.triangles length is not a multiple of 3!");
+            "Invalid crtscene file: root.objects.triangles length is not a "
+            "multiple of 3!");
       }
-      for (auto itr = object["triangles"].Begin();
-           itr != object["triangles"].End();) {
+      for (auto itr = trianglesJson.Begin(); itr != trianglesJson.End();) {
         const double x = itr++->GetInt();
         const double y = itr++->GetInt();
         const double z = itr++->GetInt();
-        indicies.emplace_back(x, y, z);
+        indices.emplace_back(x, y, z);
       }
-      meshes.emplace_back(std::move(vertices), std::move(indicies));
+      meshes.emplace_back(std::move(vertices), std::move(indices));
       vertices.clear();
-      indicies.clear();
+      indices.clear();
     }
-    const rapidjson::Value &lightsJson = document["lights"];
+
     std::vector<Light> lights;
-    double intensity;
-    vec3<double> position;
-    for (auto &light : lightsJson.GetArray()) {
-      if (light["position"].Size() != 3) {
-        fclose(fp);
-        // TODO: show exact lights array index when implementing error handling
-        // for every step of the parsing
+    for (const auto &light : requireArrayMember("lights").GetArray()) {
+      const auto positionMember = light.FindMember("position");
+      const auto intensityMember = light.FindMember("intensity");
+      if (positionMember == light.MemberEnd() ||
+          !positionMember->value.IsArray() ||
+          positionMember->value.Size() != 3 ||
+          intensityMember == light.MemberEnd() ||
+          !intensityMember->value.IsNumber()) {
         throw std::runtime_error(
-            "Invalid crtscene file, root.lights[?].position is not an array of "
-            "3 numbers");
+            "Invalid crtscene file: every root.lights entry needs a 'position' "
+            "array of 3 numbers and a numeric 'intensity'");
       }
-      intensity = light["intensity"].GetDouble();
-      const auto &positionJson = light["position"];
-      position = {positionJson[0].GetDouble(), positionJson[1].GetDouble(),
-                  positionJson[2].GetDouble()};
-      lights.emplace_back(intensity, position);
+      const auto &positionJson = positionMember->value;
+      lights.emplace_back(
+          intensityMember->value.GetDouble(),
+          vec3<double>{positionJson[0].GetDouble(), positionJson[1].GetDouble(),
+                       positionJson[2].GetDouble()});
     }
-    fclose(fp);
-    const std::string::size_type startPos = filename[0] == '.' ? 2 : 0;
-    Scene scene{
-        std::move(settings), std::move(camera), std::move(meshes),
-        std::move(lights),
-        filename.substr(startPos, filename.find('.', startPos) - startPos)};
+
+    Scene scene{std::move(settings), std::move(camera), std::move(meshes),
+                std::move(lights)};
     return scene;
   }
 
@@ -1015,9 +1142,9 @@ public:
     settings_.imageSettings().height = height;
   }
 
-  void overwriteBackgoroundColor(const Color &c) noexcept {
+  void overwriteBackgroundColor(const Color &c) noexcept {
     settings_.backgroundColor() = c;
   }
 };
 
-#endif //__UTILS_CRT
+#endif // UTILS_CRT_HPP
