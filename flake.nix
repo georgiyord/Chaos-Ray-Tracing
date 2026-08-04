@@ -105,6 +105,31 @@
           driveFileId = "10WpZDl70ZdENGGxrythDj55QAkHuFZMK";
           hash = "sha256-vBkpu4I/NJAQ1SGzFWxhbxYo67b1rjFj7ng/eCK6wHc=";
         };
+
+        CRT09-Task1-Scene0 = fetchGoogleDrive {
+          driveFileId = "17-ggBUQYz_BDAGg9Fu0BgX3nIZZBPzn7";
+          hash = "sha256-pQsStzxCpz2hSYvSxRngcSDjkylQcDw5HqAsjOqMjUM=";
+        };
+        CRT09-Task1-Scene1 = fetchGoogleDrive {
+          driveFileId = "10qPP_07wj5n5qgdYVIm-JcekbkbeE_vy";
+          hash = "sha256-9WyMqCkeqysZMYNJyPdnph3gSyR6s/NvBQgS6B66pVM=";
+        };
+        CRT09-Task2-Scene2 = fetchGoogleDrive {
+          driveFileId = "14LYG5nj28YfLmE2ymuJpVPXRLZzy2msa";
+          hash = "sha256-9WyMqCkeqysZMYNJyPdnph3gSyR6s/NvBQgS6B66pVM=";
+        };
+        CRT09-Task2-Scene3 = fetchGoogleDrive {
+          driveFileId = "1yAc9Ei5wezpfbyfvTcq8DeBs7iudB0Ld";
+          hash = "sha256-8QNl8r5/9lwB94rSFLG0SioiV5Rpovq93+U0aaXTWwg=";
+        };
+        CRT09-Task3-Scene4 = fetchGoogleDrive {
+          driveFileId = "1eLmRS50u7QILHVnJTvCxuMEnCxcoFz_M";
+          hash = "sha256-Vg7NyF4N4HDmyKdSGv1fPVoftbJikQzp4OrRo15Fx5o=";
+        };
+        CRT09-Task3-Scene5 = fetchGoogleDrive {
+          driveFileId = "1dq8qgAjvuWTGTXNNJxbYqBqCZZXg0PjI";
+          hash = "sha256-zqhJ9eItT3KRO04Xt2QqNHmDsnwBPLDU390RoOGeqCk=";
+        };
       };
     };
 }
