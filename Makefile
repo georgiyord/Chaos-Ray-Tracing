@@ -1,10 +1,10 @@
 __NO_TARGET:
 	echo "Specify a target!"
 
-DEFINITIONS = 
+DEFINITIONS ?= 
 
 CXX      = g++
-CXXFLAGS = -std=c++23 -I./include/ -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wdouble-promotion $(DEFINITIONS)
+CXXFLAGS = -std=c++26 -I./include/ -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wdouble-promotion $(DEFINITIONS)
 
 CXXFLAGS_DEBUG = $(CXXFLAGS) -g -O0 -fsanitize=address,undefined -fno-omit-frame-pointer
 CXXFLAGS_RELEASE = $(CXXFLAGS) -g -O3 -Werror
