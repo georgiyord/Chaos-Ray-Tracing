@@ -4,10 +4,11 @@
 #include <ostream>
 #include <string>
 #include <string_view>
+
 #include <utils.hpp>
 
 struct ProgramSettings {
-  std::string outPath = "scene.ppm";
+  std::string outPath = "render.ppm";
   size_t renderWidth = 0;
   size_t renderHeight = 0;
   std::string sceneFilePath;

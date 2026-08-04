@@ -8,4 +8,4 @@ perf*
 flamegraph*.html
 *.py
 result
-scene.ppm
+render.ppm
