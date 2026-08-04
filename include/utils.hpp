@@ -1,13 +1,20 @@
+// TODO: this header is getting too big and hard to read. Split into multiple
+// headers
+
 #ifndef UTILS_CRT_HPP
 #define UTILS_CRT_HPP
 
+#define RAPIDJSON_HAS_STDSTRING 1
+#define RAPIDJSON_USE_MEMBERSMAP 1
+
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
-#include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
@@ -18,13 +25,16 @@
 #include <numbers>
 #include <ostream>
 #include <random>
-#include <rapidjson/document.h>
-#include <rapidjson/filereadstream.h>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+#include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
+#include <rapidjson/istreamwrapper.h>
+#include <rapidjson/schema.h>
 
 using u64 = uint64_t;
 using u32 = uint32_t;
@@ -38,7 +48,7 @@ using i8 = int8_t;
 template <typename T>
 concept Numeric = std::is_arithmetic_v<T>;
 
-template <typename T>
+template <typename T = double>
   requires Numeric<T>
 class vec3 {
   T x_;
@@ -421,6 +431,15 @@ public:
       throw std::runtime_error("Color values cannot be negative");
     return Color{value, value, value};
   }
+
+  [[nodiscard]] constexpr double red() const noexcept { return r; }
+  [[nodiscard]] constexpr double green() const noexcept { return g; }
+  [[nodiscard]] constexpr double blue() const noexcept { return b; }
+
+  [[nodiscard]] static constexpr Color
+  elementWiseMultiplication(const Color &lhs, const Color &rhs) {
+    return {lhs.r * rhs.r, lhs.g * rhs.g, lhs.b * rhs.b};
+  }
 };
 
 namespace Colors {
@@ -471,14 +490,14 @@ public:
   constexpr Ray() noexcept
       : origin_(vec3<double>::zero()), direction_(vec3<double>::NEG_Z()) {}
 
-  [[nodiscard]] constexpr vec3<double> origin() noexcept { return origin_; }
-  [[nodiscard]] constexpr vec3<double> direction() noexcept {
+  [[nodiscard]] constexpr vec3<double> &origin() noexcept { return origin_; }
+  [[nodiscard]] constexpr vec3<double> &direction() noexcept {
     return direction_;
   }
-  [[nodiscard]] constexpr const vec3<double> origin() const noexcept {
+  [[nodiscard]] constexpr const vec3<double> &origin() const noexcept {
     return origin_;
   }
-  [[nodiscard]] constexpr const vec3<double> direction() const noexcept {
+  [[nodiscard]] constexpr const vec3<double> &direction() const noexcept {
     return direction_;
   }
 };
@@ -647,57 +666,175 @@ std::ostream &operator<<(std::ostream &os, const Matrix3x3<T> &mat) {
   return os;
 }
 
-class Mesh {
+enum class MaterialType { DIFFUSE, REFLECTIVE };
+[[nodiscard]] inline MaterialType
+getMaterialTypeFromString(const std::string &str) {
+  // std::string strUp;
+  // strUp.resize(str.size());
+  // std::transform(str.begin(), str.end(), strUp.begin(), ::toupper);
+
+  // if (strUp == "DIFFUSE") {
+  //   return MaterialType::DIFFUSE;
+  // } else if (strUp == "REFLECTIVE") {
+  //   return MaterialType::REFLECTIVE;
+  // } else [[unlikely]] {
+  //   throw std::runtime_error("Invalid Material Type enum string: " + strUp);
+  // }
+
+  if (str == "diffuse") {
+    return MaterialType::DIFFUSE;
+  } else if (str == "reflective") {
+    return MaterialType::REFLECTIVE;
+  } else [[unlikely]] {
+    throw std::runtime_error("Invalid Material Type enum string: " + str +
+                             "! This should have been caught by the validator "
+                             "but failed during the enum parser?");
+  }
+}
+
+class Material {
+  MaterialType materialType_;
+  Color albedo_;
+  bool smoothShading_;
+
 public:
-  class ConstTriangleIterator {
-    const Mesh *parent_;
-    std::vector<vec3<size_t>>::const_iterator itr_;
+  constexpr Material(MaterialType materialType, Color albedo,
+                     bool smoothShading)
+      : materialType_(materialType), albedo_(albedo),
+        smoothShading_(smoothShading) {}
+  [[nodiscard]] MaterialType materialType() const noexcept {
+    return materialType_;
+  }
+  [[nodiscard]] const Color &albedo() const noexcept { return albedo_; }
+  [[nodiscard]] bool smoothShading() const noexcept { return smoothShading_; }
+};
 
-  public:
-    ConstTriangleIterator(const Mesh &parent,
-                          std::vector<vec3<size_t>>::const_iterator itr)
-        : parent_(&parent), itr_(itr) {}
-    [[nodiscard]] const Triangle operator*() const noexcept {
-      return parent_->getTriangle(*itr_);
-    }
-    ConstTriangleIterator &operator++() noexcept {
-      ++itr_;
-      return *this;
-    }
-    bool operator!=(const ConstTriangleIterator &rhs) const noexcept {
-      return itr_ != rhs.itr_;
-    }
-  };
-
+class Mesh {
 private:
   std::vector<vec3<double>> vertices_;
-  std::vector<vec3<size_t>> indices_;
-  std::vector<vec3<double>>
-      normals_; // cache normals so they don't get calculated for each pixel
-                // while rendering
+  std::vector<vec3<double>> vertexNormals_;
+  std::vector<std::array<size_t, 3>> triangleVertexIndices_;
+  std::vector<vec3<double>> triangleNormals_;
+  const Material *material_;
 
 public:
   Mesh(std::vector<vec3<double>> &&vertices,
-       std::vector<vec3<size_t>> indices)
-      : vertices_{std::move(vertices)}, indices_{std::move(indices)} {
-    for (const auto &vertexIndices : indices_) {
-      normals_.emplace_back(getTriangle(vertexIndices).normal());
+       std::vector<std::array<size_t, 3>> &&triangleVertexIndices,
+       const Material *material)
+      : vertices_{std::move(vertices)},
+        triangleVertexIndices_{std::move(triangleVertexIndices)},
+        material_{material} {
+    vertexNormals_.resize(vertices_.size());
+    for (const auto &vertexIndices : triangleVertexIndices_) {
+      const auto triangleNormal = getTriangle(vertexIndices).normal();
+      triangleNormals_.emplace_back(triangleNormal);
+      vertexNormals_[vertexIndices[0]] += triangleNormal;
+      vertexNormals_[vertexIndices[1]] += triangleNormal;
+      vertexNormals_[vertexIndices[2]] += triangleNormal;
+    }
+    for (auto &vertexNormal : vertexNormals_) {
+      vertexNormal.normalise();
     }
   }
-  ConstTriangleIterator begin() const noexcept {
-    return ConstTriangleIterator{*this, indices_.cbegin()};
-  }
-  ConstTriangleIterator end() const noexcept {
-    return ConstTriangleIterator{*this, indices_.cend()};
-  }
-  [[nodiscard]] const auto &indices() const noexcept { return indices_; }
   [[nodiscard]] const auto &vertices() const noexcept { return vertices_; }
-  [[nodiscard]] const auto &normals() const noexcept { return normals_; }
+  [[nodiscard]] const auto &vertexNormals() const noexcept {
+    return vertexNormals_;
+  }
+  [[nodiscard]] const auto &triangleVertexIndices() const noexcept {
+    return triangleVertexIndices_;
+  }
+  [[nodiscard]] const auto &triangleNormals() const noexcept {
+    return triangleNormals_;
+  }
+  [[nodiscard]] auto material() const noexcept { return material_; }
 
   [[nodiscard]] Triangle
-  getTriangle(const vec3<size_t> &indices) const noexcept {
-    return Triangle{vertices_[indices.x()], vertices_[indices.y()],
-                    vertices_[indices.z()]};
+  getTriangle(const std::array<size_t, 3> &indices) const noexcept {
+    return Triangle{vertices_[indices[0]], vertices_[indices[1]],
+                    vertices_[indices[2]]};
+  }
+
+  struct IntersectResult {
+    double steps = std::numeric_limits<double>::infinity();
+    const vec3<double> *triangleNormal = nullptr;
+    const Material *material = nullptr;
+    const vec3<double> *vertexPos1 = nullptr;
+    const vec3<double> *vertexPos2 = nullptr;
+    const vec3<double> *vertexPos3 = nullptr;
+    const vec3<double> *vertexNormal1 = nullptr;
+    const vec3<double> *vertexNormal2 = nullptr;
+    const vec3<double> *vertexNormal3 = nullptr;
+  };
+
+  [[nodiscard]] const IntersectResult
+  intersects(const Ray &ray) const noexcept {
+    IntersectResult result;
+    for (size_t i = 0; i < triangleVertexIndices_.size(); ++i) {
+      const auto triangleTmp = getTriangle(triangleVertexIndices_[i]);
+      const auto stepsTmp = triangleTmp.intersects(ray, triangleNormals_[i]);
+      if (std::isnan(stepsTmp))
+        continue;
+      if (stepsTmp < result.steps) {
+        result = {
+            stepsTmp,
+            &triangleNormals_[i],
+            material_,
+            &vertices_[triangleVertexIndices_[i][0]],
+            &vertices_[triangleVertexIndices_[i][1]],
+            &vertices_[triangleVertexIndices_[i][2]],
+            &vertexNormals_[triangleVertexIndices_[i][0]],
+            &vertexNormals_[triangleVertexIndices_[i][1]],
+            &vertexNormals_[triangleVertexIndices_[i][2]],
+        };
+      }
+    }
+    return result;
+  }
+  [[nodiscard]] IntersectResult
+  intersects(const Ray &ray, double maxDistanceSquared) const noexcept {
+    IntersectResult result;
+    result.steps = std::numeric_limits<double>::infinity();
+    for (size_t i = 0; i < triangleVertexIndices_.size(); ++i) {
+      const auto triangleTmp = getTriangle(triangleVertexIndices_[i]);
+      const auto stepsTmp = triangleTmp.intersects(ray, triangleNormals_[i]);
+      if (std::isnan(stepsTmp))
+        continue;
+      if (stepsTmp * stepsTmp > maxDistanceSquared)
+        continue;
+      if (stepsTmp < result.steps) {
+        result.steps = stepsTmp;
+        result.triangleNormal = &triangleNormals_[i];
+        result.material = material_;
+      }
+    }
+    return result;
+  }
+  [[nodiscard]] bool intersectsFast(const Ray &ray) const noexcept {
+    IntersectResult result;
+    result.steps = std::numeric_limits<double>::infinity();
+    for (size_t i = 0; i < triangleVertexIndices_.size(); ++i) {
+      const auto triangleTmp = getTriangle(triangleVertexIndices_[i]);
+      const auto stepsTmp = triangleTmp.intersects(ray, triangleNormals_[i]);
+      if (std::isnan(stepsTmp))
+        continue;
+      return true;
+    }
+    return false;
+  }
+  [[nodiscard]] bool intersectsFast(const Ray &ray,
+                                    double maxDistanceSquared) const noexcept {
+    IntersectResult result;
+    result.steps = std::numeric_limits<double>::infinity();
+    for (size_t i = 0; i < triangleVertexIndices_.size(); ++i) {
+      const auto triangleTmp = getTriangle(triangleVertexIndices_[i]);
+      const auto stepsTmp = triangleTmp.intersects(ray, triangleNormals_[i]);
+      if (std::isnan(stepsTmp))
+        continue;
+      if (stepsTmp * stepsTmp > maxDistanceSquared)
+        continue;
+      return true;
+    }
+    return false;
   }
 };
 
@@ -816,39 +953,55 @@ public:
         vec3<double> direction({world_x, world_y, -1.0});
         direction = direction * orientation_;
         Ray ray{position_, direction};
-        double steps = std::numeric_limits<double>::infinity();
-        Triangle triangle;
-        vec3<double> triangleNormal;
-        for (size_t j = 0; j < meshes.size(); ++j) {
-          for (size_t i = 0; i < meshes[j].indices().size(); ++i) {
-            const auto triangleTmp =
-                meshes[j].getTriangle(meshes[j].indices()[i]);
-            const auto stepsTmp =
-                triangleTmp.intersects(ray, meshes[j].normals()[i]);
-            if (std::isnan(stepsTmp))
-              continue;
-            if (stepsTmp < steps) {
-              steps = stepsTmp;
-              triangle = triangleTmp;
-              triangleNormal = meshes[j].normals()[i];
-            }
+        vec3<double> hitPoint;
+        // TODO: change this struct type location to global namespace
+        Mesh::IntersectResult intersectResult;
+        size_t reflectiveDepth = 0;
+        Color previousAlbedo = Colors::White;
+        bool isReflective = false;
+        do {
+          for (size_t j = 0; j < meshes.size(); ++j) {
+            const auto newIntersectResult = meshes[j].intersects(ray);
+            if (newIntersectResult.steps < intersectResult.steps)
+              intersectResult = newIntersectResult;
           }
-        }
+          if (intersectResult.steps == std::numeric_limits<double>::infinity())
+            break;
+          hitPoint = ray.origin() + intersectResult.steps * ray.direction();
+          if (intersectResult.material->materialType() !=
+              MaterialType::REFLECTIVE)
+            break;
+          isReflective = true;
+          ray = {hitPoint + *intersectResult.triangleNormal * 1e-4,
+                 direction - 2 *
+                                 dotProduct(direction,
+                                            *intersectResult.triangleNormal) *
+                                 *intersectResult.triangleNormal};
+          previousAlbedo = Color::elementWiseMultiplication(
+              previousAlbedo, intersectResult.material->albedo());
+          intersectResult = {};
+          ++reflectiveDepth;
+        } while (reflectiveDepth < 5);
 // #define RENDER_LIGHT_SOURCES
 #ifdef RENDER_LIGHT_SOURCES
         bool lightHit = false;
+        ray = {position_, direction};
         for (size_t j = 0; j < lights.size(); ++j) {
           const auto stepsLight = Sphere{lights[j].position()}.intersects(ray);
           if (std::isnan(stepsLight))
             continue;
-          if (stepsLight < steps) {
-            steps = stepsLight;
+          if (stepsLight < intersectResult.steps) {
+            intersectResult.steps = stepsLight;
             lightHit = true;
           }
         }
 #endif // RENDER_LIGHT_SOURCES
-        if (steps == std::numeric_limits<double>::infinity()) {
-          image << backgroundColor.getU8View() << " ";
+        if (intersectResult.steps == std::numeric_limits<double>::infinity()) {
+          image << (isReflective ? Color::elementWiseMultiplication(
+                                       previousAlbedo, backgroundColor)
+                                 : backgroundColor)
+                       .getU8View()
+                << " ";
         } else {
           double pixelLightReached = 0;
 #ifdef RENDER_LIGHT_SOURCES
@@ -857,53 +1010,67 @@ public:
             continue;
           }
 #endif // RENDER_LIGHT_SOURCES
+          vec3<double> pointNormalVector;
+          const auto v1p = hitPoint - *intersectResult.vertexPos1;
+          const auto v1v2 =
+              *intersectResult.vertexPos2 - *intersectResult.vertexPos1;
+          const auto v1v3 =
+              *intersectResult.vertexPos3 - *intersectResult.vertexPos1;
+          const auto triangleArea = crossProduct(v1v2, v1v3).length();
+          const auto u = crossProduct(v1p, v1v3).length() / triangleArea;
+          const auto v = crossProduct(v1v2, v1p).length() / triangleArea;
+          if (intersectResult.material->smoothShading() == true) {
+            pointNormalVector = (u * *intersectResult.vertexNormal2 +
+                                 v * *intersectResult.vertexNormal3 +
+                                 (1 - u - v) * *intersectResult.vertexNormal1)
+                                    .normalise();
+          } else {
+            pointNormalVector = *intersectResult.triangleNormal;
+          }
           for (const auto &light : lights) {
-            const auto hitPoint = ray.origin() + steps * ray.direction();
             const vec3<double> pointToLightSourceVec =
                 light.position() - hitPoint;
             vec3<double> pointToLightSourceVecNormalised =
                 pointToLightSourceVec;
             pointToLightSourceVecNormalised.normalise();
-            const double side =
-                dotProduct(pointToLightSourceVecNormalised, triangleNormal) < 0.
+            const double triangleSideHit =
+                dotProduct(ray.direction(), *intersectResult.triangleNormal) >
+                        0.
                     ? -1.
                     : 1.;
-            const vec3<double> shadingNormal = side * triangleNormal;
-            const auto cosineLawFactor = std::max(
-                0., dotProduct(pointToLightSourceVecNormalised, shadingNormal));
+            const auto cosineLawFactor =
+                std::max(0., dotProduct(pointToLightSourceVecNormalised,
+                                        triangleSideHit * pointNormalVector));
             auto tmpLight =
                 light.intensity() /
                 (4 * std::numbers::pi * pointToLightSourceVec.lengthSquared()) *
                 cosineLawFactor;
-
-            const double shadowBias = 1e-4;
-            const Ray shadowRay{
-                hitPoint + shadingNormal * shadowBias,
-                pointToLightSourceVec};
+            // if smooth shading is used, use a bigger bias to prevent sharp
+            // edges in phong shading
+            const double shadowBias =
+                intersectResult.material->smoothShading() ? 1e-2 * 5 : 1e-4;
+            Ray shadowRay{hitPoint +
+                              triangleSideHit * pointNormalVector * shadowBias,
+                          pointToLightSourceVec};
             bool shadowRayIntersection = false;
             for (size_t j = 0; j < meshes.size(); ++j) {
-              for (size_t i = 0; i < meshes[j].indices().size(); ++i) {
-                const auto triangleTmp =
-                    meshes[j].getTriangle(meshes[j].indices()[i]);
-                const auto stepsTmp =
-                    triangleTmp.intersects(shadowRay, meshes[j].normals()[i]);
-                if (std::isnan(stepsTmp))
-                  continue;
-                if (stepsTmp * stepsTmp > pointToLightSourceVec.lengthSquared())
-                  continue;
-                shadowRayIntersection = true;
+              shadowRayIntersection = meshes[j].intersectsFast(
+                  shadowRay, pointToLightSourceVec.lengthSquared());
+              if (shadowRayIntersection) {
                 tmpLight = 0;
                 break;
               }
-              if (shadowRayIntersection)
-                break;
             }
             pixelLightReached += tmpLight;
           }
-          const Color albedo{.33, .25, .33};
+          Color albedo = intersectResult.material->albedo();
+          if (isReflective) {
+            albedo = Color::elementWiseMultiplication(albedo, previousAlbedo);
+          }
           const double LIGHT_EXPOSURE = 1;
           image << (albedo * pixelLightReached * LIGHT_EXPOSURE).getU8View()
                 << " ";
+          // image << (Color{u, v, 0}).getU8View() << " ";
         }
       }
     }
@@ -942,16 +1109,18 @@ class Scene {
   Camera camera_;
   std::vector<Mesh> meshes_;
   std::vector<Light> lights_;
+  std::vector<Material> materials_;
 
   Scene(Settings &&settings, Camera &&camera, std::vector<Mesh> &&meshes,
-        std::vector<Light> &&lights)
+        std::vector<Light> &&lights, std::vector<Material> &&materials)
       : settings_{std::move(settings)}, camera_{std::move(camera)},
-        meshes_{std::move(meshes)}, lights_{std::move(lights)} {}
+        meshes_{std::move(meshes)}, lights_{std::move(lights)},
+        materials_{std::move(materials)} {}
 
 public:
   [[nodiscard]] static Scene loadScene(const std::string &filename) {
-    FILE *fp = fopen(filename.c_str(), "rb");
-    if (!fp) {
+    std::ifstream ifs(filename, std::ios::binary);
+    if (!ifs.is_open()) {
       throw std::runtime_error("Failed to open the scene file: " + filename);
     }
 
@@ -971,155 +1140,106 @@ public:
       };
     };
 
-    rapidjson::FileReadStream is(fp, fileBuffer, sizeof(fileBuffer));
+    constexpr char schemaJson[] = {
+#embed "../schema.json"
+    };
+    rapidjson::Document sd;
+    sd.Parse(static_cast<const char *>(schemaJson), sizeof(schemaJson));
+    rapidjson::SchemaDocument schema(sd);
+
+    rapidjson::IStreamWrapper is(ifs, fileBuffer, sizeof(fileBuffer));
     rapidjson::Document document;
     document.ParseStream(is);
     if (document.HasParseError()) {
-      throw std::runtime_error("Failed to parse the scene file: " + filename);
+      throw std::runtime_error(
+          "Failed to parse the scene file " + filename + ": " +
+          rapidjson::GetParseError_En(document.GetParseError()));
     }
     if (!document.IsObject()) {
-      throw std::runtime_error("Invalid crtscene file: root is not an object");
-    }
-
-    const auto requireObjectMember = [&document](const char *key)
-        -> const rapidjson::Value & {
-      const auto member = document.FindMember(key);
-      if (member == document.MemberEnd() || !member->value.IsObject()) {
-        throw std::runtime_error("Invalid crtscene file: root." +
-                                 std::string(key) + " is missing or not an "
-                                 "object");
-      }
-      return member->value;
-    };
-    const auto requireArrayMember = [&document](const char *key)
-        -> const rapidjson::Value & {
-      const auto member = document.FindMember(key);
-      if (member == document.MemberEnd() || !member->value.IsArray()) {
-        throw std::runtime_error("Invalid crtscene file: root." +
-                                 std::string(key) +
-                                 " is missing or not an array");
-      }
-      return member->value;
-    };
-    const auto requireArrayOfSize = [](const rapidjson::Value &value,
-                                       size_t size,
-                                       const std::string &description) -> void {
-      if (!value.IsArray() || value.Size() != size) {
-        throw std::runtime_error("Invalid crtscene file: " + description +
-                                 " is not an array of " +
-                                 std::to_string(size) + " numbers");
-      }
-    };
-    const auto requireMemberArrayOfSize = [&requireArrayOfSize](
-                                              const rapidjson::Value &object,
-                                              const char *key, size_t size,
-                                              const std::string &description) {
-      const auto member = object.FindMember(key);
-      if (member == object.MemberEnd() || !member->value.IsArray()) {
-        throw std::runtime_error("Invalid crtscene file: " + description +
-                                 " is missing or not an array");
-      }
-      requireArrayOfSize(member->value, size, description);
-    };
-
-    const rapidjson::Value &settingsJson = requireObjectMember("settings");
-    requireMemberArrayOfSize(settingsJson, "background_color", 3,
-                             "root.settings.background_color");
-    const auto imageSettingsMember = settingsJson.FindMember("image_settings");
-    if (imageSettingsMember == settingsJson.MemberEnd() ||
-        !imageSettingsMember->value.IsObject()) {
       throw std::runtime_error(
-          "Invalid crtscene file: root.settings.image_settings is missing or "
-          "not an object");
+          "Invalid crtscene file: root is not a JSON object");
     }
-    const rapidjson::Value &imageSettings = imageSettingsMember->value;
-    const auto widthMember = imageSettings.FindMember("width");
-    const auto heightMember = imageSettings.FindMember("height");
-    if (widthMember == imageSettings.MemberEnd() ||
-        !widthMember->value.IsUint() ||
-        heightMember == imageSettings.MemberEnd() ||
-        !heightMember->value.IsUint()) {
-      throw std::runtime_error(
-          "Invalid crtscene file: root.settings.image_settings needs unsigned "
-          "'width' and 'height'");
-    }
-    Settings settings = {arrToColorObject(settingsJson["background_color"]),
-                         widthMember->value.GetUint(),
-                         heightMember->value.GetUint()};
 
-    const rapidjson::Value &cameraSettings = requireObjectMember("camera");
-    requireMemberArrayOfSize(cameraSettings, "position", 3,
-                             "root.camera.position");
-    requireMemberArrayOfSize(cameraSettings, "matrix", 9, "root.camera.matrix");
-    Camera camera = {arrToVec3(cameraSettings["position"]),
-                     arrToMatrix3x3(cameraSettings["matrix"])};
+    rapidjson::SchemaValidator validator(schema);
+    // validator.SetValidateFlags(rapidjson::kValidateContinueOnErrorFlag);
+    if (!document.Accept(validator)) {
+      const char *msg =
+          rapidjson::GetValidateError_En(validator.GetInvalidSchemaCode());
+      const char *kw = validator.GetInvalidSchemaKeyword();
+      throw std::runtime_error("Failed to validate the scene file " + filename +
+                               " on " + kw + ": " + msg);
+    }
+
+    // verify scene file correctness
+    // matrix of camera and vertices indeces
+    Settings settings = {
+        arrToColorObject(document["settings"]["background_color"]),
+        document["settings"]["image_settings"]["width"].GetUint64(),
+        document["settings"]["image_settings"]["height"].GetUint64()};
+
+    Camera camera = {arrToVec3(document["camera"]["position"]),
+                     arrToMatrix3x3(document["camera"]["matrix"])};
+
+    std::vector<Material> materials;
+    for (const auto &material : document["materials"].GetArray()) {
+      const auto typeMember = material["type"].GetString();
+      const auto albedoMember = material["albedo"].GetArray();
+      const auto smoothShadingMember = material["smooth_shading"].GetBool();
+      materials.emplace_back(getMaterialTypeFromString(typeMember),
+                             arrToColorObject(albedoMember),
+                             smoothShadingMember);
+    }
 
     std::vector<Mesh> meshes;
-    const rapidjson::Value &meshesJson = requireArrayMember("objects");
     std::vector<vec3<double>> vertices;
-    std::vector<vec3<size_t>> indices;
-    for (const auto &object : meshesJson.GetArray()) {
-      const auto verticesMember = object.FindMember("vertices");
-      const auto trianglesMember = object.FindMember("triangles");
-      if (verticesMember == object.MemberEnd() ||
-          !verticesMember->value.IsArray() ||
-          trianglesMember == object.MemberEnd() ||
-          !trianglesMember->value.IsArray()) {
-        throw std::runtime_error(
-            "Invalid crtscene file: every root.objects entry needs 'vertices' "
-            "and 'triangles' arrays");
+    std::vector<std::array<size_t, 3>> indices;
+    for (const auto &object : document["objects"].GetArray()) {
+      const auto verticesMember = object["vertices"].GetArray();
+      const auto trianglesMember = object["triangles"].GetArray();
+      const auto materialIndexMember = object["material_index"].GetUint64();
+      if (verticesMember.Size() % 3 != 0) {
+        throw std::runtime_error("Invalid crtscene file: root.objects.vertices "
+                                 "length is not a multiple of 3!");
       }
-      const rapidjson::Value &verticesJson = verticesMember->value;
-      const rapidjson::Value &trianglesJson = trianglesMember->value;
-      if (verticesJson.Size() % 3 != 0) {
-        throw std::runtime_error(
-            "Invalid crtscene file: root.objects.vertices length is not a "
-            "multiple of 3!");
-      }
-      for (auto itr = verticesJson.Begin(); itr != verticesJson.End();) {
-        const double x = itr++->GetDouble();
-        const double y = itr++->GetDouble();
-        const double z = itr++->GetDouble();
+      for (auto vertexCoordinateItr = verticesMember.Begin();
+           vertexCoordinateItr != verticesMember.End();) {
+        const double x = vertexCoordinateItr++->GetDouble();
+        const double y = vertexCoordinateItr++->GetDouble();
+        const double z = vertexCoordinateItr++->GetDouble();
         vertices.emplace_back(x, y, z);
       }
-      if (trianglesJson.Size() % 3 != 0) {
+      if (trianglesMember.Size() % 3 != 0) {
         throw std::runtime_error(
             "Invalid crtscene file: root.objects.triangles length is not a "
             "multiple of 3!");
       }
-      for (auto itr = trianglesJson.Begin(); itr != trianglesJson.End();) {
-        const double x = itr++->GetInt();
-        const double y = itr++->GetInt();
-        const double z = itr++->GetInt();
-        indices.emplace_back(x, y, z);
+      for (auto triangleIndexItr = trianglesMember.Begin();
+           triangleIndexItr != trianglesMember.End();) {
+        const size_t x = triangleIndexItr++->GetUint64();
+        const size_t y = triangleIndexItr++->GetUint64();
+        const size_t z = triangleIndexItr++->GetUint64();
+        indices.push_back({x, y, z});
       }
-      meshes.emplace_back(std::move(vertices), std::move(indices));
+      meshes.emplace_back(std::move(vertices), std::move(indices),
+                          &materials[materialIndexMember]);
       vertices.clear();
       indices.clear();
     }
 
     std::vector<Light> lights;
-    for (const auto &light : requireArrayMember("lights").GetArray()) {
-      const auto positionMember = light.FindMember("position");
-      const auto intensityMember = light.FindMember("intensity");
-      if (positionMember == light.MemberEnd() ||
-          !positionMember->value.IsArray() ||
-          positionMember->value.Size() != 3 ||
-          intensityMember == light.MemberEnd() ||
-          !intensityMember->value.IsNumber()) {
-        throw std::runtime_error(
-            "Invalid crtscene file: every root.lights entry needs a 'position' "
-            "array of 3 numbers and a numeric 'intensity'");
+    if (document.HasMember("lights")) {
+      for (const auto &light : document["lights"].GetArray()) {
+        const auto positionMember = light["position"].GetArray();
+        const auto intensityMember = light["intensity"].GetDouble();
+        lights.emplace_back(intensityMember,
+                            vec3<double>{positionMember[0].GetDouble(),
+                                         positionMember[1].GetDouble(),
+                                         positionMember[2].GetDouble()});
       }
-      const auto &positionJson = positionMember->value;
-      lights.emplace_back(
-          intensityMember->value.GetDouble(),
-          vec3<double>{positionJson[0].GetDouble(), positionJson[1].GetDouble(),
-                       positionJson[2].GetDouble()});
     }
 
     Scene scene{std::move(settings), std::move(camera), std::move(meshes),
-                std::move(lights)};
+                std::move(lights), std::move(materials)};
     return scene;
   }
 
@@ -1144,6 +1264,10 @@ public:
 
   void overwriteBackgroundColor(const Color &c) noexcept {
     settings_.backgroundColor() = c;
+  }
+
+  [[nodiscard]] const Material &getMaterialFromId(size_t id) const noexcept {
+    return materials_[id];
   }
 };
 
