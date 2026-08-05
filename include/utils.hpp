@@ -570,15 +570,15 @@ public:
 
     if (dotProduct(normal, crossProduct(point2() - point1(),
                                         pointPlaneIntersection - point1())) <
-        std::numeric_limits<double>::epsilon())
+        -1e2*std::numeric_limits<double>::epsilon())
       return NaN;
     if (dotProduct(normal, crossProduct(point3() - point2(),
                                         pointPlaneIntersection - point2())) <
-        std::numeric_limits<double>::epsilon())
+        -1e2*std::numeric_limits<double>::epsilon())
       return NaN;
     if (dotProduct(normal, crossProduct(point1() - point3(),
                                         pointPlaneIntersection - point3())) <
-        std::numeric_limits<double>::epsilon())
+        -1e2*std::numeric_limits<double>::epsilon())
       return NaN;
 
     return tSteps;
@@ -684,7 +684,7 @@ std::ostream &operator<<(std::ostream &os, const Matrix3x3<T> &mat) {
   return os;
 }
 
-enum class MaterialType { DIFFUSE, REFLECTIVE, REFRACTIVE };
+enum class MaterialType { DIFFUSE, REFLECTIVE, REFRACTIVE, CONSTANT };
 [[nodiscard]] inline MaterialType
 getMaterialTypeFromString(const std::string &str) {
   if (str == "diffuse") {
@@ -693,6 +693,8 @@ getMaterialTypeFromString(const std::string &str) {
     return MaterialType::REFLECTIVE;
   } else if (str == "refractive") {
     return MaterialType::REFRACTIVE;
+  } else if (str == "constant") {
+    return MaterialType::CONSTANT;
   } else [[unlikely]] {
     throw std::runtime_error("Invalid Material Type enum string: " + str +
                              "! This should have been caught by the validator "
@@ -960,6 +962,10 @@ interpolateNormal(const vec3<double> &hitPoint,
                           newTriangleHit),
         iterativeResult);
   }
+  if (intersectResult.material->materialType() == MaterialType::CONSTANT) {
+    return Color::elementWiseMultiplication(intersectResult.material->albedo(),
+                                            iterativeResult);
+  }
   if (maxDepth <= 1) {
     return Color::elementWiseMultiplication(iterativeResult,
                                             intersectResult.material->albedo());
@@ -1113,29 +1119,42 @@ public:
                 intersectResult.steps;
             maxDistance = std::max(maxDistance, intersectResult.steps);
           } else if (debugRenderMode == RenderMode::GoochShade) {
-            // Here warm colors are those exposed to light and cold the opposite. It's reverse of the traditional gooch shading but i find it more intuitive.
+            // Here warm colors are those exposed to light and cold the
+            // opposite. It's reverse of the traditional gooch shading but i
+            // find it more intuitive.
             constexpr Color cold = {0, 0, .55};
             constexpr Color warm = {.3, .3, 0};
             const double warmFactor = .6;
             const double coldFactor = .2;
-            const Color coldTint = Color::elementWiseAddition(cold, coldFactor * intersectResult.material->albedo());
-            const Color warmTint = Color::elementWiseAddition(warm, warmFactor * intersectResult.material->albedo());
+            const Color coldTint = Color::elementWiseAddition(
+                cold, coldFactor * intersectResult.material->albedo());
+            const Color warmTint = Color::elementWiseAddition(
+                warm, warmFactor * intersectResult.material->albedo());
             double lightFactor = 0;
             if (intersectResult.material->smoothShading()) {
               const vec3<double> interpolatedNormal =
                   interpolateNormal(hitPoint, intersectResult.vertexPos,
                                     intersectResult.vertexNormals);
-              for (const auto& light : lights){
-                lightFactor += (1. + dotProduct(interpolatedNormal, (light.position() - hitPoint).normalise())) / 2.;
+              for (const auto &light : lights) {
+                lightFactor +=
+                    (1. +
+                     dotProduct(interpolatedNormal,
+                                (light.position() - hitPoint).normalise())) /
+                    2.;
               }
-                                    
+
             } else {
-              for (const auto& light : lights){
-                lightFactor += (1. + dotProduct(*intersectResult.triangleNormal, (light.position() - hitPoint).normalise())) / 2.;
+              for (const auto &light : lights) {
+                lightFactor +=
+                    (1. +
+                     dotProduct(*intersectResult.triangleNormal,
+                                (light.position() - hitPoint).normalise())) /
+                    2.;
               }
             }
             lightFactor = std::clamp(lightFactor, 0., 1.);
-            screenBuffer[x + resolution.x() * y] = Color::elementWiseAddition(lightFactor * warmTint, (1 - lightFactor) * coldTint);
+            screenBuffer[x + resolution.x() * y] = Color::elementWiseAddition(
+                lightFactor * warmTint, (1 - lightFactor) * coldTint);
           } else if (debugRenderMode == RenderMode::BarycentricShade) {
             const auto coords =
                 getBarycentricCoordinates(hitPoint, intersectResult.vertexPos);
@@ -1156,6 +1175,10 @@ public:
 
             screenBuffer[x + resolution.x() * y] =
                 intersectResult.material->albedo() * lightLevel;
+          } else if (intersectResult.material->materialType() ==
+                     MaterialType::CONSTANT) {
+            screenBuffer[x + resolution.x() * y] =
+                intersectResult.material->albedo();
           } else if (intersectResult.material->materialType() ==
                      MaterialType::REFLECTIVE) {
             Color reflectedColor = reflectedRayCascade(
