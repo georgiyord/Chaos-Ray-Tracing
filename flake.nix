@@ -60,9 +60,9 @@
       };
 
       packages.x86_64-linux = {
-        CRT02 = mkCRT "2" "sha256-HjoDE/W6PTA0Sj2ygWb3M3zPboKzvjSojHJ3kFg00cA=";
-        CRT03 = mkCRT "3" "sha256-n9T/bjAXMRd8AaI49Te3VHOWDKOCfVE2Ga4EjDJDPRE=";
-        CRT04 = mkCRT "4" "sha256-2D0F/vCz+XShO/GRsdHuu6fbwkr5l3tM3Kt4DMEZIS4=";
+        CRT02 = mkCRT "2" "sha256-3aqgqKJcrNGlCT0kdeCuYO2iEmbKzNhVAQG0ziDg6Q0=";
+        CRT03 = mkCRT "3" "sha256-6cewu4peRJyPAEpCzLajHf/TCdYe5LxdJXXHF6I3wR8=";
+        CRT04 = mkCRT "4" "sha256-vuzJIkkHX3IPr58QH42eaZw+5i4OWs4mFC4QqC//THA=";
         CRT05 = mkCRT "5" "sha256-ZrZ6yhVqn9/VnwTZnkOH4/MhaHB20bABALlfSVIhUp4=";
         CRT06 = mkCRT "6" "sha256-6CWdbRIjWzNbPXeakfR6ADof31O9Lh56f42c9WGDN5w=";
         CRT07 = mkCRT "7" "sha256-i5kpOrmkMMmRCp8BUn6e6hFkqBArfYNFQRKYkXzT7To=";
@@ -130,6 +130,43 @@
         CRT09-Task3-Scene5 = fetchGoogleDrive {
           driveFileId = "1dq8qgAjvuWTGTXNNJxbYqBqCZZXg0PjI";
           hash = "sha256-zqhJ9eItT3KRO04Xt2QqNHmDsnwBPLDU390RoOGeqCk=";
+        };
+
+        CRT10-Scene0 = fetchGoogleDrive {
+          driveFileId = "1pY4bkjeBcdCcSA2rEXvVzAfPSRpIXg75";
+          hash = "sha256-S9llSqqSjYQRbhtXX+Pb9ClejbSt3pdXHQwjqpJDXUI=";
+        };
+        CRT10-Scene1 = fetchGoogleDrive {
+          driveFileId = "1hlEDmnUdjomEmIszVDdxcrntV4PGgJpa";
+          hash = "sha256-YO1M9m4qncVyaXZ/feMBvsceMWZw7ZkxI70qgkYmA0c=";
+        };
+        CRT10-Scene2 = fetchGoogleDrive {
+          driveFileId = "13fx_65lZUJlfLzKqCydy553FotGx72_1";
+          hash = "sha256-Tb1h45BhLBiFghaG2X4NheH8olemmfdg41aZ3Xr1uJM=";
+        };
+        CRT10-Scene3 = fetchGoogleDrive {
+          driveFileId = "17F17E1p1VS2OFptvNKEc9CGKpDQFfjIn";
+          hash = "sha256-IsklBRU3N/mRVl3dQg1Fa7oUyPt51h2XrSjlAqB9aSY=";
+        };
+        CRT10-Scene4 = fetchGoogleDrive {
+          driveFileId = "1kIZHhFE3gR2mO7PHdy-5BM8mTMWSpzFx";
+          hash = "sha256-O4tSu5/1Zdiyz84pnDKJVuCdbVy4twEuBa+Bq9J8ah0=";
+        };
+        CRT10-Scene5 = fetchGoogleDrive {
+          driveFileId = "1iiewSFty9rF7w4Dzz5wAiouKJ7rFP5NY";
+          hash = "sha256-BgObMNL1vylNGrV0YqtVbrHiGCxnYNdgc99W07rGX3Y=";
+        };
+        CRT10-Scene6 = fetchGoogleDrive {
+          driveFileId = "1regxdamU37OnHkofWPZABgFbPm5hnVqg";
+          hash = "sha256-G9Z6VpYYkvu+F/MldUgfHA0WbCB14p/gRz8g7FvDwag=";
+        };
+        CRT10-Scene7 = fetchGoogleDrive {
+          driveFileId = "19Ykb6ibzXLbLlWnAG41EClNC7R7ODKde";
+          hash = "sha256-drMdreHAMf613+wMgPmfPlnos1Z4rEtdDc/1s+IrgCc=";
+        };
+        CRT10-Scene8 = fetchGoogleDrive {
+          driveFileId = "1ntnrxOnKkaY1jPuW79hkZDjKJuXBIyt_";
+          hash = "sha256-C4jxJGki1psqeT6nu6D4K10vDLwomt8yTroz1IpTMF4=";
         };
       };
     };
