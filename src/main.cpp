@@ -12,22 +12,25 @@ struct ProgramSettings {
   size_t renderWidth = 0;
   size_t renderHeight = 0;
   std::string sceneFilePath;
+  RenderMode renderMode = RenderMode::Default;
 };
 
 inline void printUsage(const char *binaryName,
                        std::ostream &ostream = std::cout) {
-  ostream
-      << "Usage: " << binaryName << " [options] <path to .crtscene file>\n"
-      << "\n"
-      << "Options:\n"
-      << "\t--help          Print this menu\n"
-      << "\t-o <path>       Path to the rendered image\n"
-      << "\t-w <width>      The render width. Default value is 0, meaning that "
-         "the program will use the settings from the passed scene file.\n"
-      << "\t-h <height>     The render height. Default value is 0, meaning "
-         "that "
-         "the program will use the settings from the passed scene file.\n"
-      << '\n';
+  ostream << "Usage: " << binaryName << " [options] <path to .crtscene file>\n"
+          << "\n"
+          << "Options:\n"
+          << "\t--help                Print this menu\n"
+          << "\t-o <path>             Path to the rendered image\n"
+          << "\t-w <width>            The render width. Default value is 0, "
+             "meaning that the program will use the settings from the passed "
+             "scene file.\n"
+          << "\t-h <height>           The render height. Default value is 0, "
+             "meaning that the program will use the settings from the passed "
+             "scene file.\n"
+          << "\t-r <render mode>      The render mode. Valid arguments are: "
+             "'default', 'normal', 'distance', 'gooch', 'barycentric'\n"
+          << '\n';
 }
 
 template <int returnValue>
@@ -42,7 +45,7 @@ template <>
   std::exit(0);
 }
 
-inline void printInvalidArgumentMessageAndExit(std::string_view message) {
+[[noreturn]] inline void printInvalidArgumentMessageAndExit(std::string_view message) {
   std::cerr << "Invalid arguments: " << message << "\n";
   std::exit(EXIT_FAILURE);
 }
@@ -62,6 +65,29 @@ inline size_t parseNumber(std::string_view argument) {
   return out;
 }
 
+inline RenderMode parseRenderModeEnumString(std::string_view argument) {
+  RenderMode out;
+  if (argument == "default"){
+    out = RenderMode::Default;
+  }
+  else if (argument == "normal"){
+    out = RenderMode::NormalShade;
+  }
+  else if (argument == "distance"){
+    out = RenderMode::DistanceShade;
+  }
+  else if (argument == "gooch"){
+    out = RenderMode::GoochShade;
+  }
+  else if (argument == "barycentric"){
+    out = RenderMode::BarycentricShade;
+  }
+  else {
+    printInvalidArgumentMessageAndExit("Invalid render mode specified!");
+  }
+  return out;
+}
+
 inline ProgramSettings processArgs(int argc, const char *const *argv) {
   ProgramSettings programSettings;
   u8 flags = 0;
@@ -69,6 +95,7 @@ inline ProgramSettings processArgs(int argc, const char *const *argv) {
   constexpr u8 WIDTH_FLAG = 1 << 1;
   constexpr u8 HEIGHT_FLAG = 1 << 2;
   constexpr u8 SCENE_FLAG = 1 << 3;
+  constexpr u8 RENDER_FLAG = 1 << 4;
 
   for (int i = 1; i < argc; ++i) {
     const std::string_view argument = argv[i];
@@ -109,6 +136,13 @@ inline ProgramSettings processArgs(int argc, const char *const *argv) {
       flags |= HEIGHT_FLAG;
       programSettings.renderHeight = parseNumber(argv[++i]);
       break;
+    case 'r':
+      if ((flags & RENDER_FLAG) != 0 || i == argc - 1) {
+        printUsageAndExit<EXIT_FAILURE>(argv[0]);
+      }
+      flags |= RENDER_FLAG;
+      programSettings.renderMode = parseRenderModeEnumString(argv[++i]);
+      break;
     default:
       printUsageAndExit<EXIT_FAILURE>(argv[0]);
     }
@@ -134,7 +168,7 @@ int main(int argc, char **argv) {
     if (programSettings.renderHeight != 0) {
       scene.overwriteHeight(programSettings.renderHeight);
     }
-    scene.cameraTakeSnapshot(programSettings.outPath);
+    scene.cameraTakeSnapshot(programSettings.outPath, programSettings.renderMode);
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << '\n';
     return 1;

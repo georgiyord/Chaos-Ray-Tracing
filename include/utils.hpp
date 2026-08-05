@@ -44,6 +44,8 @@ using i64 = int64_t;
 using i32 = int32_t;
 using i16 = int16_t;
 using i8 = int8_t;
+constexpr double doubleInf = std::numeric_limits<double>::infinity();
+constexpr double doubleNaN = std::numeric_limits<double>::quiet_NaN();
 
 template <typename T>
 concept Numeric = std::is_arithmetic_v<T>;
@@ -151,8 +153,6 @@ public:
     double _length = lengthSquared();
     if (_length == 0)
       return *this;
-    // TODO: check if floating point errors reduce the effectiveness of a simple
-    // == comparison
     if (_length == 1)
       return *this;
     _length = sqrt(_length);
@@ -375,17 +375,28 @@ class Color {
                                        std::numeric_limits<T>::max()));
     }
 
-    T red = parseChannel(color_.r);
-    T green = parseChannel(color_.g);
-    T blue = parseChannel(color_.b);
+    T red_ = parseChannel(color_.r);
+    T green_ = parseChannel(color_.g);
+    T blue_ = parseChannel(color_.b);
 
   public:
+    constexpr ColorView(const Color &color) : color_(color) {}
+
     inline friend std::ostream &operator<<(std::ostream &os, ColorView<T> cv) {
-      os << static_cast<u32>(cv.red) << " " << static_cast<u32>(cv.green) << " "
-         << static_cast<u32>(cv.blue);
+      os << static_cast<u32>(cv.red_) << " " << static_cast<u32>(cv.green_)
+         << " " << static_cast<u32>(cv.blue_);
       return os;
     }
-    constexpr ColorView(const Color &color) : color_(color) {}
+
+    [[nodiscard]] std::string toString() const {
+      return std::to_string(static_cast<u32>(red_)) + " " +
+             std::to_string(static_cast<u32>(green_)) + " " +
+             std::to_string(static_cast<u32>(blue_));
+    }
+
+    [[nodiscard]] constexpr T red() const noexcept { return red_; }
+    [[nodiscard]] constexpr T green() const noexcept { return green_; }
+    [[nodiscard]] constexpr T blue() const noexcept { return blue_; }
   };
 
 public:
@@ -439,6 +450,10 @@ public:
   [[nodiscard]] static constexpr Color
   elementWiseMultiplication(const Color &lhs, const Color &rhs) {
     return {lhs.r * rhs.r, lhs.g * rhs.g, lhs.b * rhs.b};
+  }
+  [[nodiscard]] static constexpr Color elementWiseAddition(const Color &lhs,
+                                                           const Color &rhs) {
+    return {lhs.r + rhs.r, lhs.g + rhs.g, lhs.b + rhs.b};
   }
 };
 
@@ -554,13 +569,16 @@ public:
         ray.origin() + tSteps * ray.direction();
 
     if (dotProduct(normal, crossProduct(point2() - point1(),
-                                        pointPlaneIntersection - point1())) < 0)
+                                        pointPlaneIntersection - point1())) <
+        std::numeric_limits<double>::epsilon())
       return NaN;
     if (dotProduct(normal, crossProduct(point3() - point2(),
-                                        pointPlaneIntersection - point2())) < 0)
+                                        pointPlaneIntersection - point2())) <
+        std::numeric_limits<double>::epsilon())
       return NaN;
     if (dotProduct(normal, crossProduct(point1() - point3(),
-                                        pointPlaneIntersection - point3())) < 0)
+                                        pointPlaneIntersection - point3())) <
+        std::numeric_limits<double>::epsilon())
       return NaN;
 
     return tSteps;
@@ -666,25 +684,15 @@ std::ostream &operator<<(std::ostream &os, const Matrix3x3<T> &mat) {
   return os;
 }
 
-enum class MaterialType { DIFFUSE, REFLECTIVE };
+enum class MaterialType { DIFFUSE, REFLECTIVE, REFRACTIVE };
 [[nodiscard]] inline MaterialType
 getMaterialTypeFromString(const std::string &str) {
-  // std::string strUp;
-  // strUp.resize(str.size());
-  // std::transform(str.begin(), str.end(), strUp.begin(), ::toupper);
-
-  // if (strUp == "DIFFUSE") {
-  //   return MaterialType::DIFFUSE;
-  // } else if (strUp == "REFLECTIVE") {
-  //   return MaterialType::REFLECTIVE;
-  // } else [[unlikely]] {
-  //   throw std::runtime_error("Invalid Material Type enum string: " + strUp);
-  // }
-
   if (str == "diffuse") {
     return MaterialType::DIFFUSE;
   } else if (str == "reflective") {
     return MaterialType::REFLECTIVE;
+  } else if (str == "refractive") {
+    return MaterialType::REFRACTIVE;
   } else [[unlikely]] {
     throw std::runtime_error("Invalid Material Type enum string: " + str +
                              "! This should have been caught by the validator "
@@ -758,12 +766,8 @@ public:
     double steps = std::numeric_limits<double>::infinity();
     const vec3<double> *triangleNormal = nullptr;
     const Material *material = nullptr;
-    const vec3<double> *vertexPos1 = nullptr;
-    const vec3<double> *vertexPos2 = nullptr;
-    const vec3<double> *vertexPos3 = nullptr;
-    const vec3<double> *vertexNormal1 = nullptr;
-    const vec3<double> *vertexNormal2 = nullptr;
-    const vec3<double> *vertexNormal3 = nullptr;
+    std::array<const vec3<double> *, 3> vertexPos = {};
+    std::array<const vec3<double> *, 3> vertexNormals = {};
   };
 
   [[nodiscard]] const IntersectResult
@@ -775,17 +779,17 @@ public:
       if (std::isnan(stepsTmp))
         continue;
       if (stepsTmp < result.steps) {
-        result = {
-            stepsTmp,
-            &triangleNormals_[i],
-            material_,
-            &vertices_[triangleVertexIndices_[i][0]],
-            &vertices_[triangleVertexIndices_[i][1]],
-            &vertices_[triangleVertexIndices_[i][2]],
-            &vertexNormals_[triangleVertexIndices_[i][0]],
-            &vertexNormals_[triangleVertexIndices_[i][1]],
-            &vertexNormals_[triangleVertexIndices_[i][2]],
-        };
+        result = {stepsTmp,
+                  &triangleNormals_[i],
+                  material_,
+                  {
+                      &vertices_[triangleVertexIndices_[i][0]],
+                      &vertices_[triangleVertexIndices_[i][1]],
+                      &vertices_[triangleVertexIndices_[i][2]],
+                  },
+                  {&vertexNormals_[triangleVertexIndices_[i][0]],
+                   &vertexNormals_[triangleVertexIndices_[i][1]],
+                   &vertexNormals_[triangleVertexIndices_[i][2]]}};
       }
     }
     return result;
@@ -851,6 +855,137 @@ public:
   [[nodiscard]] auto position() const noexcept { return position_; }
 };
 
+enum class RenderMode {
+  Default,
+  NormalShade,
+  DistanceShade,
+  GoochShade,
+  BarycentricShade
+};
+
+[[nodiscard]] inline vec2<double> getBarycentricCoordinates(
+    const vec3<double> &hitPoint,
+    const std::array<const vec3<double> *, 3> &vertexPos) {
+  const auto v0p = hitPoint - *vertexPos[0];
+  const auto v0v1 = *vertexPos[1] - *vertexPos[0];
+  const auto v0v2 = *vertexPos[2] - *vertexPos[0];
+  const auto triangleArea = crossProduct(v0v1, v0v2).length();
+  const auto u = crossProduct(v0p, v0v2).length() / triangleArea;
+  const auto v = crossProduct(v0v1, v0p).length() / triangleArea;
+  return {u, v};
+}
+
+[[nodiscard]] inline vec3<double>
+interpolateNormal(const vec3<double> &hitPoint,
+                  const std::array<const vec3<double> *, 3> &vertexPos,
+                  const std::array<const vec3<double> *, 3> &vertexNormals) {
+  const auto coords = getBarycentricCoordinates(hitPoint, vertexPos);
+  return (coords.x() * *vertexNormals[1] + coords.y() * *vertexNormals[2] +
+          (1 - coords.x() - coords.y()) * *vertexNormals[0])
+      .normalise();
+}
+
+[[nodiscard]] inline double getLightLevel(const std::vector<Mesh> &meshes,
+                                          const std::vector<Light> &lights,
+                                          const vec3<double> &hitpoint,
+                                          const vec3<double> &surfaceNormal,
+                                          bool triangleBackHit) noexcept {
+  constexpr double shadowBias = 1e-2 * 5;
+  const double triangleSideHit = triangleBackHit ? -1. : 1.;
+  const vec3<double> origin =
+      hitpoint + triangleSideHit * surfaceNormal * shadowBias;
+  double pixelLightReached = 0;
+  for (const auto &light : lights) {
+    const vec3<double> pointToLightSourceVec = light.position() - origin;
+    vec3<double> pointToLightSourceVecNormalised = pointToLightSourceVec;
+    pointToLightSourceVecNormalised.normalise();
+    const auto cosineLawFactor =
+        std::max(0., dotProduct(pointToLightSourceVecNormalised,
+                                triangleSideHit * surfaceNormal));
+    auto tmpLight =
+        light.intensity() /
+        (4 * std::numbers::pi * pointToLightSourceVec.lengthSquared()) *
+        cosineLawFactor;
+    Ray shadowRay{origin, pointToLightSourceVec};
+    bool shadowRayIntersection = false;
+    for (size_t j = 0; j < meshes.size(); ++j) {
+      shadowRayIntersection = meshes[j].intersectsFast(
+          shadowRay, pointToLightSourceVec.lengthSquared());
+      if (shadowRayIntersection) {
+        tmpLight = 0;
+        break;
+      }
+    }
+    pixelLightReached += tmpLight;
+  }
+  return pixelLightReached;
+}
+
+[[nodiscard]] inline Color reflectedRayCascade(
+    const std::vector<Mesh> &meshes, const std::vector<Light> &lights,
+    const vec3<double> &hitpoint, const vec3<double> &surfaceNormal,
+    const Ray &previousRay, const Color &backgroundColor, bool triangleBackHit,
+    size_t maxDepth = 5, Color iterativeResult = Colors::White) {
+  constexpr double shadowBias = 1e-2 * 5;
+  const double triangleSideHit = triangleBackHit ? -1. : 1.;
+  Ray ray{hitpoint + triangleSideHit * surfaceNormal * shadowBias,
+          previousRay.direction() -
+              2 * dotProduct(previousRay.direction(), surfaceNormal) *
+                  surfaceNormal};
+  Mesh::IntersectResult intersectResult;
+  for (size_t j = 0; j < meshes.size(); ++j) {
+    const auto newIntersectResult = meshes[j].intersects(ray);
+    if (newIntersectResult.steps < intersectResult.steps)
+      intersectResult = newIntersectResult;
+  }
+  if (intersectResult.steps == doubleInf) {
+    return Color::elementWiseMultiplication(backgroundColor, iterativeResult);
+  }
+  bool newTriangleHit =
+      dotProduct(ray.direction(), *intersectResult.triangleNormal) > 0.;
+  const vec3<double> newHitPoint =
+      ray.origin() + intersectResult.steps * ray.direction();
+  if (intersectResult.material->materialType() == MaterialType::DIFFUSE) {
+    vec3<double> newSurfaceVector;
+    if (intersectResult.material->smoothShading()) {
+      newSurfaceVector =
+          interpolateNormal(newHitPoint, intersectResult.vertexPos,
+                            intersectResult.vertexNormals);
+    } else {
+      newSurfaceVector = *intersectResult.triangleNormal;
+    }
+    return Color::elementWiseMultiplication(
+        intersectResult.material->albedo() *
+            getLightLevel(meshes, lights, newHitPoint, newSurfaceVector,
+                          newTriangleHit),
+        iterativeResult);
+  }
+  if (maxDepth <= 1) {
+    return Color::elementWiseMultiplication(iterativeResult,
+                                            intersectResult.material->albedo());
+  }
+  if (intersectResult.material->materialType() == MaterialType::REFLECTIVE) {
+    return reflectedRayCascade(
+        meshes, lights, newHitPoint, *intersectResult.triangleNormal, ray,
+        backgroundColor, newTriangleHit, maxDepth - 1,
+        Color::elementWiseMultiplication(iterativeResult,
+                                         intersectResult.material->albedo()));
+  }
+  if (intersectResult.material->materialType() == MaterialType::REFRACTIVE) {
+    throw std::runtime_error("not implemented yet");
+  }
+  throw std::runtime_error("unknown material hit");
+}
+
+[[nodiscard]] inline Color refractedRayCascade() {
+  throw std::runtime_error("not implemented yet");
+}
+
+[[nodiscard]] inline bool triangleBackHit(const Ray &ray,
+                                          const vec3<double> &tiangleNormal) {
+  return dotProduct(ray.direction(), tiangleNormal) > 0.;
+}
+
 class Camera {
   vec3<double> position_;
   Matrix3x3<double> orientation_;
@@ -913,27 +1048,30 @@ public:
   void takeSnapshot(const std::string &fileName, const vec2<size_t> &resolution,
                     const std::vector<Mesh> &meshes,
                     const std::vector<Light> &lights,
-                    const Color &backgroundColor) const {
-    std::ofstream image(fileName, std::ios::trunc | std::ios::out);
-    if (!image.is_open()) {
-      throw std::runtime_error("Could not open " + fileName + " for writing!");
-    }
-    image << "P3 " << resolution.x() << " " << resolution.y() << " " << 255
-          << " ";
+                    const Color &backgroundColor,
+                    const RenderMode &debugRenderMode) const {
+    std::string outputFileBuffer;
+    outputFileBuffer.reserve(resolution.x() * resolution.y() * 4 + 100);
+    outputFileBuffer += "P3 " + std::to_string(resolution.x()) + " " +
+                        std::to_string(resolution.y()) + " 255 ";
 
-    // TODO: research if SIMD can be used here and how to nudge the compiler
-    struct PixelInfo {
-      Ray ray;
-      bool hit;
-      Triangle triangle;
-      double raySteps;
-    };
+    std::unique_ptr<Color[]> screenBuffer(
+        new Color[resolution.x() * resolution.y()]);
+    std::unique_ptr<double> distanceBuffer;
+    double maxDistance = 0;
+
+    if (debugRenderMode == RenderMode::DistanceShade) {
+      distanceBuffer.reset(new double[resolution.x() * resolution.y()]);
+      std::fill_n(distanceBuffer.get(), resolution.x() * resolution.y(),
+                  doubleNaN);
+    }
 
     const double resolutionWidth = static_cast<double>(resolution.x());
     const double resolutionHeight = static_cast<double>(resolution.y());
 
-    // Table<PixelInfo> pixels(resolution);
     const double aspectRatio = resolutionWidth / resolutionHeight;
+
+    // Phase 1, gather data
     for (size_t y = 0; y < resolution.y(); ++y) {
       for (size_t x = 0; x < resolution.x(); ++x) {
         // get the center of the pixel;
@@ -953,127 +1091,132 @@ public:
         vec3<double> direction({world_x, world_y, -1.0});
         direction = direction * orientation_;
         Ray ray{position_, direction};
-        vec3<double> hitPoint;
         // TODO: change this struct type location to global namespace
         Mesh::IntersectResult intersectResult;
-        size_t reflectiveDepth = 0;
-        Color previousAlbedo = Colors::White;
-        bool isReflective = false;
-        do {
-          for (size_t j = 0; j < meshes.size(); ++j) {
-            const auto newIntersectResult = meshes[j].intersects(ray);
-            if (newIntersectResult.steps < intersectResult.steps)
-              intersectResult = newIntersectResult;
+        for (size_t j = 0; j < meshes.size(); ++j) {
+          const auto newIntersectResult = meshes[j].intersects(ray);
+          if (newIntersectResult.steps < intersectResult.steps)
+            intersectResult = newIntersectResult;
+        }
+        vec3<double> hitPoint =
+            ray.origin() + intersectResult.steps * ray.direction();
+        if (intersectResult.steps == std::numeric_limits<double>::infinity()) {
+          screenBuffer[x + resolution.x() * y] = backgroundColor;
+        } else {
+          if (debugRenderMode == RenderMode::NormalShade) {
+            const auto &triangleNormal = *intersectResult.triangleNormal;
+            screenBuffer[x + resolution.x() * y] = {
+                (triangleNormal.x() + 1) / 2., (triangleNormal.y() + 1) / 2.,
+                (triangleNormal.z() + 1) / 2.};
+          } else if (debugRenderMode == RenderMode::DistanceShade) {
+            distanceBuffer.get()[x + resolution.x() * y] =
+                intersectResult.steps;
+            maxDistance = std::max(maxDistance, intersectResult.steps);
+          } else if (debugRenderMode == RenderMode::GoochShade) {
+            // Here warm colors are those exposed to light and cold the opposite. It's reverse of the traditional gooch shading but i find it more intuitive.
+            constexpr Color cold = {0, 0, .55};
+            constexpr Color warm = {.3, .3, 0};
+            const double warmFactor = .6;
+            const double coldFactor = .2;
+            const Color coldTint = Color::elementWiseAddition(cold, coldFactor * intersectResult.material->albedo());
+            const Color warmTint = Color::elementWiseAddition(warm, warmFactor * intersectResult.material->albedo());
+            double lightFactor = 0;
+            if (intersectResult.material->smoothShading()) {
+              const vec3<double> interpolatedNormal =
+                  interpolateNormal(hitPoint, intersectResult.vertexPos,
+                                    intersectResult.vertexNormals);
+              for (const auto& light : lights){
+                lightFactor += (1. + dotProduct(interpolatedNormal, (light.position() - hitPoint).normalise())) / 2.;
+              }
+                                    
+            } else {
+              for (const auto& light : lights){
+                lightFactor += (1. + dotProduct(*intersectResult.triangleNormal, (light.position() - hitPoint).normalise())) / 2.;
+              }
+            }
+            lightFactor = std::clamp(lightFactor, 0., 1.);
+            screenBuffer[x + resolution.x() * y] = Color::elementWiseAddition(lightFactor * warmTint, (1 - lightFactor) * coldTint);
+          } else if (debugRenderMode == RenderMode::BarycentricShade) {
+            const auto coords =
+                getBarycentricCoordinates(hitPoint, intersectResult.vertexPos);
+            screenBuffer[x + resolution.x() * y] = {coords.x(), coords.y(), 0};
+          } else if (intersectResult.material->materialType() ==
+                     MaterialType::DIFFUSE) {
+            vec3<double> surfaceNormal;
+            if (intersectResult.material->smoothShading() == true) {
+              surfaceNormal =
+                  interpolateNormal(hitPoint, intersectResult.vertexPos,
+                                    intersectResult.vertexNormals);
+            } else {
+              surfaceNormal = *intersectResult.triangleNormal;
+            }
+            double lightLevel = getLightLevel(
+                meshes, lights, hitPoint, surfaceNormal,
+                triangleBackHit(ray, *intersectResult.triangleNormal));
+
+            screenBuffer[x + resolution.x() * y] =
+                intersectResult.material->albedo() * lightLevel;
+          } else if (intersectResult.material->materialType() ==
+                     MaterialType::REFLECTIVE) {
+            Color reflectedColor = reflectedRayCascade(
+                meshes, lights, hitPoint, *intersectResult.triangleNormal, ray,
+                backgroundColor,
+                triangleBackHit(ray, *intersectResult.triangleNormal));
+            screenBuffer[x + resolution.x() * y] =
+                Color::elementWiseMultiplication(
+                    intersectResult.material->albedo(), reflectedColor);
+          } else if (intersectResult.material->materialType() ==
+                     MaterialType::REFRACTIVE) {
+            screenBuffer[x + resolution.x() * y] = refractedRayCascade();
+          } else {
+            throw std::runtime_error(
+                std::string{"Unexpected shading options at "} + __FILE__ + ":" +
+                std::to_string(__LINE__));
           }
-          if (intersectResult.steps == std::numeric_limits<double>::infinity())
-            break;
-          hitPoint = ray.origin() + intersectResult.steps * ray.direction();
-          if (intersectResult.material->materialType() !=
-              MaterialType::REFLECTIVE)
-            break;
-          isReflective = true;
-          ray = {hitPoint + *intersectResult.triangleNormal * 1e-4,
-                 direction - 2 *
-                                 dotProduct(direction,
-                                            *intersectResult.triangleNormal) *
-                                 *intersectResult.triangleNormal};
-          previousAlbedo = Color::elementWiseMultiplication(
-              previousAlbedo, intersectResult.material->albedo());
-          intersectResult = {};
-          ++reflectiveDepth;
-        } while (reflectiveDepth < 5);
+        }
 // #define RENDER_LIGHT_SOURCES
 #ifdef RENDER_LIGHT_SOURCES
-        bool lightHit = false;
-        ray = {position_, direction};
         for (size_t j = 0; j < lights.size(); ++j) {
           const auto stepsLight = Sphere{lights[j].position()}.intersects(ray);
           if (std::isnan(stepsLight))
             continue;
           if (stepsLight < intersectResult.steps) {
             intersectResult.steps = stepsLight;
-            lightHit = true;
+            screenBuffer[x + resolution.x() * y] = Colors::Yellow;
+            break;
           }
         }
 #endif // RENDER_LIGHT_SOURCES
-        if (intersectResult.steps == std::numeric_limits<double>::infinity()) {
-          image << (isReflective ? Color::elementWiseMultiplication(
-                                       previousAlbedo, backgroundColor)
-                                 : backgroundColor)
-                       .getU8View()
-                << " ";
-        } else {
-          double pixelLightReached = 0;
-#ifdef RENDER_LIGHT_SOURCES
-          if (lightHit) {
-            image << Colors::Yellow.getU8View() << " ";
-            continue;
+      }
+    }
+
+    // Phase 2: transform
+    if (debugRenderMode == RenderMode::DistanceShade) {
+      const double multiplier = 1 / maxDistance;
+      for (size_t y = 0; y < resolution.y(); ++y) {
+        for (size_t x = 0; x < resolution.x(); ++x) {
+          const size_t idx = x + y * resolution.x();
+          const auto &distance = distanceBuffer.get()[idx];
+          if (distance != doubleNaN) {
+            screenBuffer[idx] = Colors::White * distance * multiplier;
           }
-#endif // RENDER_LIGHT_SOURCES
-          vec3<double> pointNormalVector;
-          const auto v1p = hitPoint - *intersectResult.vertexPos1;
-          const auto v1v2 =
-              *intersectResult.vertexPos2 - *intersectResult.vertexPos1;
-          const auto v1v3 =
-              *intersectResult.vertexPos3 - *intersectResult.vertexPos1;
-          const auto triangleArea = crossProduct(v1v2, v1v3).length();
-          const auto u = crossProduct(v1p, v1v3).length() / triangleArea;
-          const auto v = crossProduct(v1v2, v1p).length() / triangleArea;
-          if (intersectResult.material->smoothShading() == true) {
-            pointNormalVector = (u * *intersectResult.vertexNormal2 +
-                                 v * *intersectResult.vertexNormal3 +
-                                 (1 - u - v) * *intersectResult.vertexNormal1)
-                                    .normalise();
-          } else {
-            pointNormalVector = *intersectResult.triangleNormal;
-          }
-          for (const auto &light : lights) {
-            const vec3<double> pointToLightSourceVec =
-                light.position() - hitPoint;
-            vec3<double> pointToLightSourceVecNormalised =
-                pointToLightSourceVec;
-            pointToLightSourceVecNormalised.normalise();
-            const double triangleSideHit =
-                dotProduct(ray.direction(), *intersectResult.triangleNormal) >
-                        0.
-                    ? -1.
-                    : 1.;
-            const auto cosineLawFactor =
-                std::max(0., dotProduct(pointToLightSourceVecNormalised,
-                                        triangleSideHit * pointNormalVector));
-            auto tmpLight =
-                light.intensity() /
-                (4 * std::numbers::pi * pointToLightSourceVec.lengthSquared()) *
-                cosineLawFactor;
-            // if smooth shading is used, use a bigger bias to prevent sharp
-            // edges in phong shading
-            const double shadowBias =
-                intersectResult.material->smoothShading() ? 1e-2 * 5 : 1e-4;
-            Ray shadowRay{hitPoint +
-                              triangleSideHit * pointNormalVector * shadowBias,
-                          pointToLightSourceVec};
-            bool shadowRayIntersection = false;
-            for (size_t j = 0; j < meshes.size(); ++j) {
-              shadowRayIntersection = meshes[j].intersectsFast(
-                  shadowRay, pointToLightSourceVec.lengthSquared());
-              if (shadowRayIntersection) {
-                tmpLight = 0;
-                break;
-              }
-            }
-            pixelLightReached += tmpLight;
-          }
-          Color albedo = intersectResult.material->albedo();
-          if (isReflective) {
-            albedo = Color::elementWiseMultiplication(albedo, previousAlbedo);
-          }
-          const double LIGHT_EXPOSURE = 1;
-          image << (albedo * pixelLightReached * LIGHT_EXPOSURE).getU8View()
-                << " ";
-          // image << (Color{u, v, 0}).getU8View() << " ";
         }
       }
     }
+
+    // Phase 3: render
+    for (size_t y = 0; y < resolution.y(); ++y) {
+      for (size_t x = 0; x < resolution.x(); ++x) {
+        const size_t idx = x + y * resolution.x();
+        const auto &color = screenBuffer[idx].getU8View();
+        outputFileBuffer += color.toString() + " ";
+      }
+    }
+    std::ofstream image(fileName, std::ios::trunc | std::ios::out);
+    if (!image.is_open()) {
+      throw std::runtime_error("Could not open " + fileName + " for writing!");
+    }
+    image << outputFileBuffer;
   }
   constexpr void reset() noexcept {
     position_ = vec3<double>::zero();
@@ -1245,11 +1388,13 @@ public:
 
   [[nodiscard]] Camera &camera() noexcept { return camera_; }
 
-  void cameraTakeSnapshot(const std::string &outFileName) const {
+  void
+  cameraTakeSnapshot(const std::string &outFileName,
+                     RenderMode debugRenderMode = RenderMode::Default) const {
     camera_.takeSnapshot(
         outFileName,
         {settings_.imageSettings().width, settings_.imageSettings().height},
-        meshes_, lights_, settings_.backgroundColor());
+        meshes_, lights_, settings_.backgroundColor(), debugRenderMode);
   }
 
   [[nodiscard]] Settings settings() const noexcept { return settings_; }
