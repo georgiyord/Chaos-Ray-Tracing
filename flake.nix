@@ -67,6 +67,7 @@
         CRT06 = mkCRT "6" "sha256-6CWdbRIjWzNbPXeakfR6ADof31O9Lh56f42c9WGDN5w=";
         CRT07 = mkCRT "7" "sha256-i5kpOrmkMMmRCp8BUn6e6hFkqBArfYNFQRKYkXzT7To=";
         CRT08 = mkCRT "8" "sha256-jgFZw5hH3SwSYyTAIdgoypDUxMgp66Zrp/evv/k+sSY=";
+        CRT09 = mkCRT "9" "sha256-IN6urR3SknrdRMIfDVouLsIQNxz1pvv4vlrn7ns+5hY=";
 
         CRT07-Scene0 = fetchGoogleDrive {
           driveFileId = "11j-m2eP7bGAIVHLf71Y5avSc0gKTScro";
