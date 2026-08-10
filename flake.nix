@@ -68,6 +68,7 @@
         CRT07 = mkCRT "7" "sha256-i5kpOrmkMMmRCp8BUn6e6hFkqBArfYNFQRKYkXzT7To=";
         CRT08 = mkCRT "8" "sha256-jgFZw5hH3SwSYyTAIdgoypDUxMgp66Zrp/evv/k+sSY=";
         CRT09 = mkCRT "9" "sha256-IN6urR3SknrdRMIfDVouLsIQNxz1pvv4vlrn7ns+5hY=";
+        CRT10 = mkCRT "10" "sha256-KrdWV6+mH5qz6Bax1KyX1zdk013hObAqnEvOjZGrUSE=";
 
         CRT07-Scene0 = fetchGoogleDrive {
           driveFileId = "11j-m2eP7bGAIVHLf71Y5avSc0gKTScro";
@@ -167,6 +168,11 @@
         CRT10-Scene8 = fetchGoogleDrive {
           driveFileId = "1ntnrxOnKkaY1jPuW79hkZDjKJuXBIyt_";
           hash = "sha256-C4jxJGki1psqeT6nu6D4K10vDLwomt8yTroz1IpTMF4=";
+        };
+
+        CRT11-Scenes = fetchGoogleDrive {
+          driveFileId = "17UcE6Z13qWEIxl4oqJDax027xogNAoCm";
+          hash = "sha256-bgme8QTzb8iMFsJIByBJJFiM4EepmLTtY+yXZoGzjx4=";
         };
       };
     };
