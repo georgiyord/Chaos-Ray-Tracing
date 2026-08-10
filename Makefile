@@ -1,31 +1,52 @@
-__NO_TARGET:
-	echo "Specify a target!"
+.DEFAULT_GOAL := help
+help:
+	@echo "Specify a target: make debug | make release | make clean"
 
-DEFINITIONS ?= 
+DEFINITIONS ?=
+WERROR ?= -Werror
 
 CXX      = g++
 CXXFLAGS = -std=c++26 -I./include/ -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wdouble-promotion $(DEFINITIONS)
 
-CXXFLAGS_DEBUG = $(CXXFLAGS) -g -O0 -fsanitize=address,undefined -fno-omit-frame-pointer
-CXXFLAGS_RELEASE = $(CXXFLAGS) -g -O3 -Werror
+CXXFLAGS_DEBUG   = $(CXXFLAGS) -g -O0 -fsanitize=address,undefined -fno-omit-frame-pointer
+CXXFLAGS_RELEASE = $(CXXFLAGS) -g -O3 $(WERROR)
+
+SRCS := $(wildcard src/*.cpp)
+
+OBJS_DEBUG   := $(patsubst src/%.cpp, build/Debug/%.o, $(SRCS))
+OBJS_RELEASE := $(patsubst src/%.cpp, build/Release/%.o, $(SRCS))
+
+DEPS_DEBUG   := $(OBJS_DEBUG:.o=.d)
+DEPS_RELEASE := $(OBJS_RELEASE:.o=.d)
 
 debug: ./build/Debug/crt_debug
 release: ./build/Release/crt_release
 
-./build/Debug/crt_debug: src/main.cpp include/utils.hpp build/Debug
-	$(CXX) $(CXXFLAGS_DEBUG) src/main.cpp -o ./build/Debug/crt_debug
+./build/Debug/crt_debug: $(OBJS_DEBUG) | build/Debug
+	$(CXX) $(CXXFLAGS_DEBUG) $(OBJS_DEBUG) -o $@
 
-./build/Release/crt_release: src/main.cpp include/utils.hpp build/Release
-	$(CXX) $(CXXFLAGS_RELEASE) src/main.cpp -o ./build/Release/crt_release
+./build/Release/crt_release: $(OBJS_RELEASE) | build/Release
+	$(CXX) $(CXXFLAGS_RELEASE) $(OBJS_RELEASE) -o $@
+
+build/Debug/%.o: src/%.cpp | build/Debug
+	$(CXX) $(CXXFLAGS_DEBUG) -MMD -MP -c $< -o $@
+
+build/Release/%.o: src/%.cpp | build/Release
+	$(CXX) $(CXXFLAGS_RELEASE) -MMD -MP -c $< -o $@
 
 build/Debug:
-	mkdir -p build/Debug
+	mkdir -p $@
 
 build/Release:
-	mkdir -p build/Release
+	mkdir -p $@
 
 build:
-	mkdir -p build
+	mkdir -p $@
 
 clean:
-	rm -r build
+	rm -rf build
+
+-include $(DEPS_DEBUG)
+-include $(DEPS_RELEASE)
+
+.PHONY: debug release clean help build
