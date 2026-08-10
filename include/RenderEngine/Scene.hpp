@@ -10,10 +10,6 @@
 #include "RenderEngine/vec2.hpp"
 #include <vector>
 
-#ifndef RENDERENGINE_RAY_MAXDEPTH
-#define RENDERENGINE_RAY_MAXDEPTH 5
-#endif
-
 namespace RenderEngine {
 class Scene {
   struct Settings {
@@ -22,6 +18,7 @@ class Scene {
       size_t width;
       size_t height;
     } imageSettings;
+    size_t rayMaxDepth = 5;
   };
 
   Settings settings_;
@@ -67,6 +64,10 @@ public:
   void overwriteHeight(size_t height) noexcept;
 
   void overwriteBackgroundColor(const Color &c) noexcept;
+
+  void overwriteMaxRayDepth(size_t value){
+    settings_.rayMaxDepth = value;
+  }
 
   [[nodiscard]] const Material &getMaterialFromId(size_t id) const noexcept;
 };

@@ -6,8 +6,6 @@
 #include <string>
 #include <string_view>
 
-#define RENDERENGINE_RAY_MAXDEPTH 1
-
 #include <RenderEngine/Scene.hpp>
 #include <RenderEngine/utils.hpp>
 
@@ -204,8 +202,8 @@ int main(int argc, char **argv) {
         !std::isnan(programSettings.backgroundColor.blue())) {
       scene.overwriteBackgroundColor(programSettings.backgroundColor);
     }
-    scene.cameraTakeSnapshot(programSettings.outPath,
-                             programSettings.renderMode);
+    // scene.overwriteMaxRayDepth(1);
+    scene.cameraTakeSnapshot(programSettings.outPath, programSettings.renderMode);
   } catch (const std::exception &e) {
     throw;
     std::cerr << "Error: " << e.what() << '\n';

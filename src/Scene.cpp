@@ -485,7 +485,7 @@ void Scene::cameraTakeSnapshot(const std::string &outFileName,
       worldX *= (resolutionWidth / resolutionHeight);
       vec3 direction{worldX, worldY, -1.0};
       direction = direction * camera_.orientation();
-      Ray ray{camera_.position(), direction, 5};
+      Ray ray{camera_.position(), direction, settings_.rayMaxDepth};
       buffer[x + y * settings_.imageSettings.width] = traceRay(ray, debugRenderMode);
     }
   }
