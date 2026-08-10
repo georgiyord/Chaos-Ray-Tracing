@@ -77,14 +77,15 @@
         "type": "object",
         "required": [
           "type",
-          "albedo",
           "smooth_shading"
         ],
         "properties": {
           "type": {
             "enum": [
               "diffuse",
-              "reflective"
+              "reflective",
+              "refractive",
+              "constant"
             ]
           },
           "albedo": {
@@ -99,6 +100,10 @@
           },
           "smooth_shading": {
             "type": "boolean"
+          },
+          "ior": {
+            "type": "number",
+            "minimum": 1
           }
         }
       }
