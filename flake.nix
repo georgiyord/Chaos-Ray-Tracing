@@ -36,7 +36,48 @@
         pkgs.fetchurl {
           url = "https://drive.google.com/uc?export=download&id=" + driveFileId;
           inherit hash;
+
+          passthru = {
+            scene = "/nix/store${placeholder "out"}";
+          };
         };
+      unpackageScenesArchive =
+        {
+          name,
+          package,
+          scene,
+          files,
+        }:
+        pkgs.stdenv.mkDerivation (finalAttributes: rec {
+          src = package;
+          inherit name;
+
+          nativeBuildInputs = with pkgs; [
+            p7zip
+          ];
+
+          unpackPhase = ''
+            7z x $src
+          '';
+
+          copyInstructionsList = pkgs.lib.mapAttrsToList (
+            fileOutName: fileInName: "cp ${fileInName} $out/${fileOutName}"
+          ) files;
+
+          mkDirInstructionsList = pkgs.lib.mapAttrsToList (
+            fileOutName: fileInName: "mkdir -p $out/${dirOf fileOutName}"
+          ) files;
+          copyInstructions = pkgs.lib.concatStringsSep "\n" copyInstructionsList;
+          mkDirInstructions = pkgs.lib.concatStringsSep "\n" mkDirInstructionsList;
+          installPhase = ''
+            mkdir -p $out;
+            ${mkDirInstructions}
+            ${copyInstructions}
+          '';
+          passthru = {
+            inherit scene;
+          };
+        });
     in
     {
       devShells.x86_64-linux.default = pkgs.mkShell {
