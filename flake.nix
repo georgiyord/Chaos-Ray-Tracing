@@ -100,7 +100,7 @@
         '';
       };
 
-      packages.x86_64-linux = {
+      packages.x86_64-linux = rec {
         CRT02 = mkCRT "2" "sha256-3aqgqKJcrNGlCT0kdeCuYO2iEmbKzNhVAQG0ziDg6Q0=";
         CRT03 = mkCRT "3" "sha256-6cewu4peRJyPAEpCzLajHf/TCdYe5LxdJXXHF6I3wR8=";
         CRT04 = mkCRT "4" "sha256-vuzJIkkHX3IPr58QH42eaZw+5i4OWs4mFC4QqC//THA=";
@@ -214,6 +214,52 @@
         CRT11-Scenes = fetchGoogleDrive {
           driveFileId = "17UcE6Z13qWEIxl4oqJDax027xogNAoCm";
           hash = "sha256-bgme8QTzb8iMFsJIByBJJFiM4EepmLTtY+yXZoGzjx4=";
+        };
+
+        CRT11-Scene0 = unpackageScenesArchive {
+          name = "CRT11-Scene0";
+          package = CRT11-Scenes;
+          scene = "scene.crtscene";
+          files = {
+            "scene.crtscene" = "scene0.crtscene";
+            "textures/dragon.jpg" = "textures/dragon.jpg";
+          };
+        };
+        CRT11-Scene1 = unpackageScenesArchive {
+          name = "CRT11-Scene1";
+          package = CRT11-Scenes;
+          scene = "scene.crtscene";
+          files = {
+            "scene.crtscene" = "scene1.crtscene";
+            "textures/dragon.jpg" = "textures/dragon.jpg";
+          };
+        };
+        CRT11-Scene2 = unpackageScenesArchive {
+          name = "CRT11-Scene2";
+          package = CRT11-Scenes;
+          scene = "scene.crtscene";
+          files = {
+            "scene.crtscene" = "scene2.crtscene";
+            "textures/dragon.jpg" = "textures/dragon.jpg";
+          };
+        };
+        CRT11-Scene3 = unpackageScenesArchive {
+          name = "CRT11-Scene3";
+          package = CRT11-Scenes;
+          scene = "scene.crtscene";
+          files = {
+            "scene.crtscene" = "scene3.crtscene";
+            "textures/dragon.jpg" = "textures/dragon.jpg";
+          };
+        };
+        CRT11-Scene4 = unpackageScenesArchive {
+          name = "CRT11-Scene4";
+          package = CRT11-Scenes;
+          scene = "scene.crtscene";
+          files = {
+            "scene.crtscene" = "scene4.crtscene";
+            "textures/dragon.jpg" = "textures/dragon.jpg";
+          };
         };
       };
     };
