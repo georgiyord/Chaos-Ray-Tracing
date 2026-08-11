@@ -6,7 +6,8 @@
     "settings",
     "camera",
     "materials",
-    "objects"
+    "objects",
+    "textures"
   ],
   "properties": {
     "settings": {
@@ -70,6 +71,91 @@
         }
       }
     },
+    "textures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "type"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "albedo",
+              "edges",
+              "checker",
+              "bitmap"
+            ]
+          },
+          "albedo": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "edge_color": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "inner_color": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "color_A": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "color_B": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "edge_width": {
+            "type": "number",
+            "minimum": 0
+          },
+          "square_size": {
+            "type": "number",
+            "minimum": 0
+          },
+          "file_path": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "materials": {
       "type": "array",
       "minItems": 1,
@@ -89,14 +175,7 @@
             ]
           },
           "albedo": {
-            "type": "array",
-            "minItems": 3,
-            "maxItems": 3,
-            "items": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 1
-            }
+            "type": "string"
           },
           "smooth_shading": {
             "type": "boolean"
@@ -116,7 +195,8 @@
         "required": [
           "material_index",
           "vertices",
-          "triangles"
+          "triangles",
+          "uvs"
         ],
         "properties": {
           "material_index": {
@@ -136,6 +216,15 @@
             "items": {
               "type": "integer",
               "minimum": 0
+            }
+          },
+          "uvs":{
+            "type":"array",
+            "minItems": 3,
+            "items": {
+              "type":"number",
+              "minimum": 0,
+              "maximum": 1
             }
           }
         }
