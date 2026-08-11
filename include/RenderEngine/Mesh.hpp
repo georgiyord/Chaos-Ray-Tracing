@@ -1,6 +1,7 @@
 #ifndef RENDERENGINE_MESH_HPP
 #define RENDERENGINE_MESH_HPP
 
+#include "RenderEngine/Color.hpp"
 #include "RenderEngine/Ray.hpp"
 #include "RenderEngine/Triangle.hpp"
 #include "RenderEngine/utils.hpp"
@@ -17,10 +18,12 @@ private:
   std::vector<std::array<size_t, 3>> triangleVertexIndices_;
   std::vector<vec3> triangleNormals_;
   size_t materialId_;
+  std::vector<vec3> uvs_;
 
 public:
   Mesh(std::vector<vec3> &&vertices,
        std::vector<std::array<size_t, 3>> &&triangleVertexIndices,
+       std::vector<vec3> &&uvs,
        size_t materialId);
   [[nodiscard]] const std::vector<vec3> &vertices() const noexcept;
   [[nodiscard]] const std::vector<vec3> &vertexNormals() const noexcept;
@@ -28,17 +31,19 @@ public:
   triangleVertexIndices() const noexcept;
   [[nodiscard]] const std::vector<vec3> &triangleNormals() const noexcept;
   [[nodiscard]] size_t materialId() const noexcept;
+  [[nodiscard]] const std::vector<vec3> &uvs() const noexcept;
 
   [[nodiscard]] Triangle
   getTriangle(const std::array<size_t, 3> &indices) const noexcept;
 
   struct IntersectResult {
     double steps = doubleInf;
-    vec3 hitPoint = { doubleNaN, doubleNaN, doubleNaN };
+    vec3 hitPoint = {doubleNaN, doubleNaN, doubleNaN};
     const vec3 *triangleNormal = nullptr;
     size_t materialId = 0xBAAD0000;
     std::array<const vec3 *, 3> vertexPos = {};
     std::array<const vec3 *, 3> vertexNormals = {};
+    std::array<const vec3 *, 3> uvs = {};
     const Mesh *mesh = nullptr;
   };
 

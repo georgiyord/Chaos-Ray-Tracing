@@ -6,8 +6,11 @@
 #include "RenderEngine/Light.hpp"
 #include "RenderEngine/Material.hpp"
 #include "RenderEngine/Mesh.hpp"
+#include "RenderEngine/Texture.hpp"
 #include "RenderEngine/utils.hpp"
 #include "RenderEngine/vec2.hpp"
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace RenderEngine {
@@ -23,12 +26,14 @@ class Scene {
 
   Settings settings_;
   Camera camera_;
-  std::vector<Mesh> meshes_;
   std::vector<Light> lights_;
+  std::unordered_map<std::string, Texture> textures_;
   std::vector<Material> materials_;
+  std::vector<Mesh> meshes_;
 
-  Scene(Settings &&settings, Camera &&camera, std::vector<Mesh> &&meshes,
-        std::vector<Light> &&lights, std::vector<Material> &&materials);
+  Scene(Settings &&, Camera &&, std::vector<Light> &&,
+        std::unordered_map<std::string, Texture> &&, std::vector<Material> &&,
+        std::vector<Mesh> &&);
 
   [[nodiscard]] double traceShadowRay(const vec3 &rayOrigin,
                                       const vec3 &surfaceNormal) const;
@@ -48,6 +53,8 @@ class Scene {
   [[nodiscard]] static vec2
   getBarycentricCoordinates(const vec3 &,
                             const std::array<const vec3 *, 3> &) noexcept;
+  [[nodiscard]] Color
+  getTextureColor(const Mesh::IntersectResult &intersectResult) const;
 
 public:
   [[nodiscard]] static Scene loadScene(const std::string &filename);
@@ -65,9 +72,7 @@ public:
 
   void overwriteBackgroundColor(const Color &c) noexcept;
 
-  void overwriteMaxRayDepth(size_t value){
-    settings_.rayMaxDepth = value;
-  }
+  void overwriteMaxRayDepth(size_t value) { settings_.rayMaxDepth = value; }
 
   [[nodiscard]] const Material &getMaterialFromId(size_t id) const noexcept;
 };

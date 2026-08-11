@@ -4,10 +4,10 @@
 namespace RenderEngine {
 Mesh::Mesh(std::vector<vec3> &&vertices,
            std::vector<std::array<size_t, 3>> &&triangleVertexIndices,
-           size_t materialId)
+           std::vector<vec3> &&uvs, size_t materialId)
     : vertices_{std::move(vertices)},
       triangleVertexIndices_{std::move(triangleVertexIndices)},
-      materialId_{materialId} {
+      materialId_{materialId}, uvs_{std::move(uvs)} {
   vertexNormals_.resize(vertices_.size());
   for (const auto &vertexIndices : triangleVertexIndices_) {
     const auto triangleNormal = getTriangle(vertexIndices).calculateNormal();
@@ -34,6 +34,10 @@ Mesh::triangleVertexIndices() const noexcept {
   return triangleNormals_;
 }
 [[nodiscard]] size_t Mesh::materialId() const noexcept { return materialId_; }
+
+[[nodiscard]] const std::vector<vec3> &Mesh::uvs() const noexcept {
+  return uvs_;
+}
 
 [[nodiscard]] Triangle
 Mesh::getTriangle(const std::array<size_t, 3> &indices) const noexcept {
@@ -62,6 +66,9 @@ Mesh::intersects(const Ray &ray) const noexcept {
                 {&vertexNormals_[triangleVertexIndices_[i][0]],
                  &vertexNormals_[triangleVertexIndices_[i][1]],
                  &vertexNormals_[triangleVertexIndices_[i][2]]},
+                {&uvs_[triangleVertexIndices_[i][0]],
+                 &uvs_[triangleVertexIndices_[i][1]],
+                 &uvs_[triangleVertexIndices_[i][2]]},
                 this};
     }
   }
@@ -90,6 +97,9 @@ Mesh::intersects(const Ray &ray, double maxDistanceSquared) const noexcept {
                 {&vertexNormals_[triangleVertexIndices_[i][0]],
                  &vertexNormals_[triangleVertexIndices_[i][1]],
                  &vertexNormals_[triangleVertexIndices_[i][2]]},
+                {&uvs_[triangleVertexIndices_[i][0]],
+                 &uvs_[triangleVertexIndices_[i][1]],
+                 &uvs_[triangleVertexIndices_[i][2]]},
                 this};
     }
   }
@@ -105,8 +115,8 @@ Mesh::intersects(const Ray &ray, double maxDistanceSquared) const noexcept {
   }
   return false;
 }
-[[nodiscard]] bool Mesh::intersectsFast(const Ray &ray,
-                                  double maxDistanceSquared) const noexcept {
+[[nodiscard]] bool
+Mesh::intersectsFast(const Ray &ray, double maxDistanceSquared) const noexcept {
   for (size_t i = 0; i < triangleVertexIndices_.size(); ++i) {
     const auto triangleTmp = getTriangle(triangleVertexIndices_[i]);
     const auto stepsTmp = triangleTmp.intersects(ray, triangleNormals_[i]);

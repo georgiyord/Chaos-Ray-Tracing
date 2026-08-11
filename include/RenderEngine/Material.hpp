@@ -10,9 +10,10 @@ getMaterialTypeFromString(const std::string &str);
 
 struct Material {
   MaterialType materialType_ = MaterialType::CONSTANT;
-  Color albedo_ = Colors::White;
+  std::string textureName;
   bool smoothShading_ = false;
   double ior_ = 1;
+  
 };
 } // namespace RenderEngine
 

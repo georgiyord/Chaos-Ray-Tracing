@@ -205,7 +205,6 @@ int main(int argc, char **argv) {
     // scene.overwriteMaxRayDepth(1);
     scene.cameraTakeSnapshot(programSettings.outPath, programSettings.renderMode);
   } catch (const std::exception &e) {
-    throw;
     std::cerr << "Error: " << e.what() << '\n';
     return 1;
   }
