@@ -111,7 +111,8 @@
         CRT09 = mkCRT "9" "sha256-IN6urR3SknrdRMIfDVouLsIQNxz1pvv4vlrn7ns+5hY=";
         # CRT10 and CRT11 had the same tasks
         CRT10 = mkCRT "10" "sha256-KrdWV6+mH5qz6Bax1KyX1zdk013hObAqnEvOjZGrUSE=";
-        CRT11 = mkCRT "11" "sha256-KrdWV6+mH5qz6Bax1KyX1zdk013hObAqnEvOjZGrUSE=";
+        CRT11 = CRT10;
+        CRT12 = mkCRT "12" "sha256-s4gqa6H6pt8cLPXcTL6YA1aouPqtPXSjoY5BmWNNUi8=";
 
         CRT07-Scene0 = fetchGoogleDrive {
           driveFileId = "12j-m2eP7bGAIVHLf71Y5avSc0gKTScro";
