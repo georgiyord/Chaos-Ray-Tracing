@@ -109,10 +109,12 @@
         CRT07 = mkCRT "7" "sha256-i5kpOrmkMMmRCp8BUn6e6hFkqBArfYNFQRKYkXzT7To=";
         CRT08 = mkCRT "8" "sha256-jgFZw5hH3SwSYyTAIdgoypDUxMgp66Zrp/evv/k+sSY=";
         CRT09 = mkCRT "9" "sha256-IN6urR3SknrdRMIfDVouLsIQNxz1pvv4vlrn7ns+5hY=";
+        # CRT10 and CRT11 had the same tasks
         CRT10 = mkCRT "10" "sha256-KrdWV6+mH5qz6Bax1KyX1zdk013hObAqnEvOjZGrUSE=";
+        CRT11 = mkCRT "11" "sha256-KrdWV6+mH5qz6Bax1KyX1zdk013hObAqnEvOjZGrUSE=";
 
         CRT07-Scene0 = fetchGoogleDrive {
-          driveFileId = "11j-m2eP7bGAIVHLf71Y5avSc0gKTScro";
+          driveFileId = "12j-m2eP7bGAIVHLf71Y5avSc0gKTScro";
           hash = "sha256-RIa3ib28Q7kvm+hzSnk89VPGYPlsI58qfQwZVMHukQM=";
         };
         CRT07-Scene1 = fetchGoogleDrive {
@@ -211,50 +213,61 @@
           hash = "sha256-C4jxJGki1psqeT6nu6D4K10vDLwomt8yTroz1IpTMF4=";
         };
 
-        CRT11-Scenes = fetchGoogleDrive {
+        # CRT10 and CRT11 had the same tasks
+        CRT11-Scene0 = CRT10-Scene0;
+        CRT11-Scene1 = CRT10-Scene1;
+        CRT11-Scene2 = CRT10-Scene2;
+        CRT11-Scene3 = CRT10-Scene3;
+        CRT11-Scene4 = CRT10-Scene4;
+        CRT11-Scene5 = CRT10-Scene5;
+        CRT11-Scene6 = CRT10-Scene6;
+        CRT11-Scene7 = CRT10-Scene7;
+        CRT11-Scene8 = CRT10-Scene8;
+
+        CRT12-Scenes = fetchGoogleDrive {
           driveFileId = "17UcE6Z13qWEIxl4oqJDax027xogNAoCm";
           hash = "sha256-bgme8QTzb8iMFsJIByBJJFiM4EepmLTtY+yXZoGzjx4=";
         };
 
-        CRT11-Scene0 = unpackageScenesArchive {
-          name = "CRT11-Scene0";
-          package = CRT11-Scenes;
+        CRT12-Scene0 = unpackageScenesArchive {
+          name = "CRT12-Scene0";
+          package = CRT12-Scenes;
           scene = "scene.crtscene";
           files = {
             "scene.crtscene" = "scene0.crtscene";
             "textures/dragon.jpg" = "textures/dragon.jpg";
           };
         };
-        CRT11-Scene1 = unpackageScenesArchive {
-          name = "CRT11-Scene1";
-          package = CRT11-Scenes;
+        CRT12-Scene1 = unpackageScenesArchive {
+          name = "CRT12-Scene1";
+          package = CRT12-Scenes;
           scene = "scene.crtscene";
           files = {
             "scene.crtscene" = "scene1.crtscene";
             "textures/dragon.jpg" = "textures/dragon.jpg";
           };
         };
-        CRT11-Scene2 = unpackageScenesArchive {
-          name = "CRT11-Scene2";
-          package = CRT11-Scenes;
+        CRT12-Scene2 = unpackageScenesArchive {
+          name = "CRT12-Scene2";
+          package = CRT12-Scenes;
           scene = "scene.crtscene";
           files = {
             "scene.crtscene" = "scene2.crtscene";
             "textures/dragon.jpg" = "textures/dragon.jpg";
           };
         };
-        CRT11-Scene3 = unpackageScenesArchive {
-          name = "CRT11-Scene3";
-          package = CRT11-Scenes;
+        CRT12-Scene3 = unpackageScenesArchive {
+          name = "CRT12-Scene3";
+          package = CRT12-Scenes;
           scene = "scene.crtscene";
           files = {
             "scene.crtscene" = "scene3.crtscene";
             "textures/dragon.jpg" = "textures/dragon.jpg";
           };
         };
-        CRT11-Scene4 = unpackageScenesArchive {
-          name = "CRT11-Scene4";
-          package = CRT11-Scenes;
+        CRT12-Scene4 = unpackageScenesArchive {
+          name = "CRT12-Scene4";
+          package = CRT12-Scenes;
           scene = "scene.crtscene";
           files = {
             "scene.crtscene" = "scene4.crtscene";
