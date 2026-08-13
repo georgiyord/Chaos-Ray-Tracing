@@ -38,7 +38,7 @@
           inherit hash;
 
           passthru = {
-            scene = "/nix/store${placeholder "out"}";
+            scene = "";
           };
         };
       unpackageScenesArchive =
@@ -78,6 +78,50 @@
             inherit scene;
           };
         });
+      materialsToTexturesFilter = ''
+        .materials as $m
+        | .textures += [
+            $m | to_entries[]
+            | select(.value.albedo | type == "array")
+            | {name: ("albedo_" + (.key|tostring)), type: "albedo", albedo: .value.albedo}
+          ]
+        | .materials = [
+            $m | to_entries[]
+            | .value.albedo = (if (.value.albedo|type) == "array" then ("albedo_" + (.key|tostring)) else .value.albedo end)
+            | .value
+          ]
+        | .objects |= map(if has("uvs") then . else .uvs = (.vertices | map(0)) end)
+      '';
+      patchScene =
+        {
+          package,
+          jqFilter,
+        }:
+        pkgs.stdenv.mkDerivation {
+          name = package.name + "-patched";
+          src = package;
+          dontUnpack = true;
+          nativeBuildInputs = with pkgs; [
+            jq
+          ];
+
+          installPhase = ''
+            if [ -z "${package.passthru.scene}" ]; then
+              cp "$src" "$out"
+              srcFile="$out"
+            else
+              cp -r "$src/." "$out/"
+              chmod -R u+w "$out"
+              srcFile="$out/${package.passthru.scene}"
+            fi
+            jq '${jqFilter}' "$srcFile" > "$srcFile.tmp" \
+              && mv "$srcFile.tmp" "$srcFile"
+          '';
+
+          passthru = {
+            scene = package.passthru.scene;
+          };
+        };
     in
     {
       devShells.x86_64-linux.default = pkgs.mkShell {
@@ -96,7 +140,7 @@
 
         shellHook = ''
           make clean
-          bear -- make debug
+          bear -- make debug CXX=${pkgs.gcc16}/bin/g++
         '';
       };
 
@@ -112,7 +156,7 @@
         # CRT10 and CRT11 had the same tasks
         CRT10 = mkCRT "10" "sha256-KrdWV6+mH5qz6Bax1KyX1zdk013hObAqnEvOjZGrUSE=";
         CRT11 = CRT10;
-        CRT12 = mkCRT "12" "sha256-s4gqa6H6pt8cLPXcTL6YA1aouPqtPXSjoY5BmWNNUi8=";
+        CRT12 = mkCRT "12" "sha256-JeSwJIWchgIVCRaG3uzPsBcubuTEui+qQvPVqszyqN8=";
 
         CRT07-Scene0 = fetchGoogleDrive {
           driveFileId = "12j-m2eP7bGAIVHLf71Y5avSc0gKTScro";
@@ -275,6 +319,25 @@
             "textures/dragon.jpg" = "textures/dragon.jpg";
           };
         };
+      };
+
+      CRT14-Scene0 = patchScene {
+        package = (
+          fetchGoogleDrive {
+            driveFileId = "17AHbLsK7h6uK1WBptgr5Lmi2LF980xm-";
+            hash = "sha256-vJJiUIfmKj2kst/1q2/gjbOhJwHi+5QQuvnA0aH/8wI=";
+          }
+        );
+        jqFilter = materialsToTexturesFilter;
+      };
+      CRT14-Scene1 = patchScene {
+        package = (
+          fetchGoogleDrive {
+            driveFileId = "1gqtpMqIYTC3K5kq4BdjarSnHSkDQ-AQs";
+            hash = "sha256-qRIIojMAfJhbHnG9AbG7rSaPeEUetdXejA2FHAqxcQc=";
+          }
+        );
+        jqFilter = materialsToTexturesFilter;
       };
     };
 }
