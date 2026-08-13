@@ -13,6 +13,7 @@
 #include <RenderEngine/ColorView.tpp>
 #include <RenderEngine/Scene.hpp>
 #include <RenderEngine/Table.tpp>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
@@ -586,6 +587,7 @@ Scene::handleRefractiveMaterial(const Mesh::IntersectResult &intersectResult,
 
 void Scene::cameraTakeSnapshot(const std::string &outFileName,
                                RenderMode debugRenderMode) const {
+  const auto timerStart = std::chrono::steady_clock::now();
   const double resolutionWidth =
       static_cast<double>(settings_.imageSettings.width);
   const double resolutionHeight =
@@ -636,6 +638,8 @@ void Scene::cameraTakeSnapshot(const std::string &outFileName,
        ++i) {
     outputFileBuffer += buffer[i].getU8View().toString() + " ";
   }
+  const auto timerEnd = std::chrono::steady_clock::now();
+  std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timerEnd - timerStart) << '\n';
   std::ofstream image(outFileName, std::ios::trunc | std::ios::out);
   if (!image.is_open()) {
     throw std::runtime_error("Could not open " + outFileName + " for writing!");
