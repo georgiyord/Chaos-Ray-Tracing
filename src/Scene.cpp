@@ -472,7 +472,7 @@ handleReflectiveMaterial(const Scene &scene,
 [[nodiscard]] Color
 handleRefractiveMaterial(const Scene &scene,
                          const IntersectResult &intersectResult,
-                                const Ray &previousRay) noexcept {
+                         const Ray &previousRay) noexcept {
   if (previousRay.depthChances_ == 0) {
     return scene.settings_.backgroundColor;
   }
@@ -803,6 +803,7 @@ handleRefractiveMaterial(const Scene &scene,
 
 void Scene::cameraTakeSnapshot(const std::string &outFileName,
                                RenderMode debugRenderMode) const {
+  const auto timerStart = std::chrono::steady_clock::now();
   const double resolutionWidth =
       static_cast<double>(settings_.imageSettings.width);
   const double resolutionHeight =
@@ -853,6 +854,8 @@ void Scene::cameraTakeSnapshot(const std::string &outFileName,
        ++i) {
     outputFileBuffer += buffer[i].getU8View().toString() + " ";
   }
+  const auto timerEnd = std::chrono::steady_clock::now();
+  std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timerEnd - timerStart) << '\n';
   std::ofstream image(outFileName, std::ios::trunc | std::ios::out);
   if (!image.is_open()) {
     throw std::runtime_error("Could not open " + outFileName + " for writing!");
