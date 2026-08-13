@@ -1,25 +1,26 @@
 // Split this into a Scene and Renderer class to both follow the diagrams from
 // the presentation and to reduce the size of it
 
+#include "RenderEngine/Scene.hpp"
+#include "RenderEngine/AABB.hpp"
+#include "RenderEngine/AccelerationTree.hpp"
 #include "RenderEngine/Bitmap.hpp"
+#include "RenderEngine/Color.hpp"
+#include "RenderEngine/ColorView.tpp"
 #include "RenderEngine/Material.hpp"
 #include "RenderEngine/Mesh.hpp"
 #include "RenderEngine/Texture.hpp"
 #include "RenderEngine/Triangle.hpp"
+#include "RenderEngine/Vertex.hpp"
 #include "RenderEngine/utils.hpp"
 #include "RenderEngine/vec3.hpp"
-#include "RenderEngine/Color.hpp"
-#include "RenderEngine/ColorView.tpp"
-#include "RenderEngine/Scene.hpp"
-#include "RenderEngine/Vertex.hpp"
-#include "RenderEngine/AABB.hpp"
-#include "RenderEngine/AccelerationTree.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/istreamwrapper.h"
 #include "rapidjson/rapidjson.h"
 #include "rapidjson/schema.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
@@ -43,21 +44,24 @@ struct IntersectResult {
   size_t id_mesh;
 };
 
-Color handleDiffuseMaterial(const Scene&, const IntersectResult&) noexcept;
-Color handleReflectiveMaterial(const Scene&, const IntersectResult&, const Ray&) noexcept;
-Color handleRefractiveMaterial(const Scene&, const IntersectResult&, const Ray&) noexcept;
+Color handleDiffuseMaterial(const Scene &, const IntersectResult &) noexcept;
+Color handleReflectiveMaterial(const Scene &, const IntersectResult &,
+                               const Ray &) noexcept;
+Color handleRefractiveMaterial(const Scene &, const IntersectResult &,
+                               const Ray &) noexcept;
 
 Scene::Scene(Settings &&settings, Camera &&camera, std::vector<Light> &&lights,
              std::vector<Bitmap> &&bitmaps, std::vector<Texture> &&textures,
              std::vector<Material> &&materials, std::vector<Vertex> &&vertices,
              std::vector<Triangle> &&triangles,
-             std::vector<vec3> &&triangleNormals, std::vector<Mesh> &&meshes, AccelerationTree &&accelerationTree)
+             std::vector<vec3> &&triangleNormals, std::vector<Mesh> &&meshes,
+             AccelerationTree &&accelerationTree)
     : settings_{std::move(settings)}, camera_{std::move(camera)},
       lights_{std::move(lights)}, bitmaps_{std::move(bitmaps)},
       textures_{std::move(textures)}, materials_{std::move(materials)},
       vertices_{std::move(vertices)}, triangles_{std::move(triangles)},
-      triangleNormals_{std::move(triangleNormals)}, meshes_{std::move(meshes)}, accelerationTree_{std::move(accelerationTree)} {
-}
+      triangleNormals_{std::move(triangleNormals)}, meshes_{std::move(meshes)},
+      accelerationTree_{std::move(accelerationTree)} {}
 
 [[nodiscard]] IntersectResult intersects(const Scene &scene, const Ray &ray,
                                          size_t id_triangle) noexcept {
@@ -210,7 +214,8 @@ interpolateNormal(const Scene &scene,
     bool shadowRayIntersection = false;
     IntersectResult intersectResult;
     const std::vector<size_t> trianglIds = accelerationTree_.intersects(ray);
-    if (trianglIds.empty()){
+    if (trianglIds.empty()) {
+      finalLightReached += tmpLight;
       continue;
     }
     for (const size_t id : trianglIds) {
@@ -241,13 +246,16 @@ interpolateNormal(const Scene &scene,
     const auto [u, v] = getBarycentricCoordinates(
         intersectResult.hitPoint,
         scene
-            .vertices_[scene.triangles_[intersectResult.id_triangle].id_vertex1_]
+            .vertices_[scene.triangles_[intersectResult.id_triangle]
+                           .id_vertex1_]
             .position,
         scene
-            .vertices_[scene.triangles_[intersectResult.id_triangle].id_vertex2_]
+            .vertices_[scene.triangles_[intersectResult.id_triangle]
+                           .id_vertex2_]
             .position,
         scene
-            .vertices_[scene.triangles_[intersectResult.id_triangle].id_vertex3_]
+            .vertices_[scene.triangles_[intersectResult.id_triangle]
+                           .id_vertex3_]
             .position);
     if ((u < edgesTexture.edge_width) || (v < edgesTexture.edge_width) ||
         (1 - u - v < edgesTexture.edge_width))
@@ -266,10 +274,8 @@ interpolateNormal(const Scene &scene,
     const vec3 interpolatedUV =
         u * vertex2.uv + v * vertex3.uv + (1 - u - v) * vertex1.uv;
     const double reciprocate = 1 / checkerTexture.square_size;
-    size_t uSampled =
-        static_cast<size_t>(interpolatedUV.x_ * reciprocate);
-    size_t vSampled =
-        static_cast<size_t>(interpolatedUV.y_ * reciprocate);
+    size_t uSampled = static_cast<size_t>(interpolatedUV.x_ * reciprocate);
+    size_t vSampled = static_cast<size_t>(interpolatedUV.y_ * reciprocate);
     if ((uSampled % 2 == 0 && vSampled % 2 == 0) ||
         (uSampled % 2 == 1 && vSampled % 2 == 1))
       return checkerTexture.color_A;
@@ -337,7 +343,7 @@ goochShade(const Scene &scene,
                                     RenderMode debugRenderMode) const {
   IntersectResult intersectResult;
   const std::vector<size_t> trianglIds = accelerationTree_.intersects(ray);
-  if (trianglIds.empty()){
+  if (trianglIds.empty()) {
     return settings_.backgroundColor;
   }
   for (const size_t id : trianglIds) {
@@ -386,8 +392,10 @@ goochShade(const Scene &scene,
   case MaterialType::REFLECTIVE:
     return handleReflectiveMaterial(*this, intersectResult, ray);
   case MaterialType::REFRACTIVE:
-    Color reflectionColor = handleReflectiveMaterial(*this, intersectResult, ray);
-    Color refractionColor = handleRefractiveMaterial(*this, intersectResult, ray);
+    Color reflectionColor =
+        handleReflectiveMaterial(*this, intersectResult, ray);
+    Color refractionColor =
+        handleRefractiveMaterial(*this, intersectResult, ray);
 
     vec3 finalNormal;
     if (materials_[intersectResult.id_material].smoothShading) {
@@ -462,7 +470,8 @@ handleReflectiveMaterial(const Scene &scene,
 // Does not handle refractive and / or reflecive objects inside refractrive
 // objects
 [[nodiscard]] Color
-handleRefractiveMaterial(const Scene& scene, const IntersectResult &intersectResult,
+handleRefractiveMaterial(const Scene &scene,
+                         const IntersectResult &intersectResult,
                                 const Ray &previousRay) noexcept {
   if (previousRay.depthChances_ == 0) {
     return scene.settings_.backgroundColor;
@@ -725,7 +734,7 @@ handleRefractiveMaterial(const Scene& scene, const IntersectResult &intersectRes
       const double z = vertexCoordinateItr++->GetDouble();
       vertices.emplace_back(vec3{x, y, z}, vec3::zero(), vec3::zero());
     }
-    for (rapidjson::SizeType i = 0; i < uvsMember.Size(); ) {
+    for (rapidjson::SizeType i = 0; i < uvsMember.Size();) {
       const double x = uvsMember[i++].GetDouble();
       const double y = uvsMember[i++].GetDouble();
       const double z = uvsMember[i++].GetDouble();
@@ -749,7 +758,7 @@ handleRefractiveMaterial(const Scene& scene, const IntersectResult &intersectRes
       vertices[y + verticesOffset].normal += triangleNormals.back();
       vertices[z + verticesOffset].normal += triangleNormals.back();
     }
-    for (Vertex& vertex : vertices){
+    for (Vertex &vertex : vertices) {
       vertex.normal.normalise();
     }
     meshes.emplace_back(trianglesOffset, trianglesMember.Size(),
@@ -769,7 +778,7 @@ handleRefractiveMaterial(const Scene& scene, const IntersectResult &intersectRes
   double minX, minY, minZ, maxX, maxY, maxZ;
   minX = minY = minZ = doubleInf;
   maxX = maxY = maxZ = -doubleInf;
-  for (const Vertex& vertex : vertices){
+  for (const Vertex &vertex : vertices) {
     minX = std::min(minX, vertex.position.x_);
     minY = std::min(minY, vertex.position.y_);
     minZ = std::min(minZ, vertex.position.z_);
@@ -785,7 +794,8 @@ handleRefractiveMaterial(const Scene& scene, const IntersectResult &intersectRes
               std::move(lights),          std::move(bitmaps),
               std::move(textures),        std::move(materials),
               std::move(vertices),        std::move(triangles),
-              std::move(triangleNormals), std::move(meshes), std::move(accelerationTree)};
+              std::move(triangleNormals), std::move(meshes),
+              std::move(accelerationTree)};
   return scene;
 }
 

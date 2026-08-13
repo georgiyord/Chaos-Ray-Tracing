@@ -4,6 +4,14 @@ set -euo pipefail
 
 # --- CONFIGURATION ---
 BUILD_TYPE="${1:-release}" # Defaults to release if no argument is provided
+SCENE_NAME="${2:-}"
+
+if [ -z "${SCENE_NAME}" ]; then
+    echo "Error: a scene name is required." >&2
+    echo "Usage: $0 [debug|release] <CRT##-Scene#>" >&2
+    echo "  e.g. $0 release CRT11-Scene0" >&2
+    exit 1
+fi
 
 # Map the user argument to your exact Makefile targets and binary paths
 if [ "${BUILD_TYPE,,}" = "debug" ]; then
@@ -15,16 +23,16 @@ elif [ "${BUILD_TYPE,,}" = "release" ]; then
     BINARY_PATH="./build/Release/crt_release"
     OUTPUT_HTML="flamegraph_release.html"
 else
-    echo "Usage: $0 [debug|release]" >&2
+    echo "Error: invalid build type '${BUILD_TYPE}'." >&2
+    echo "Usage: $0 [debug|release] <CRT##-Scene#>" >&2
+    echo "  e.g. $0 release CRT11-Scene0" >&2
     exit 1
 fi
 
-BINARY_ARGS="scene4.crtscene" # Add your runtime arguments here if needed
+BINARY_ARGS="$(./getScenePath.sh "${SCENE_NAME}")"
 
 # --- BUILD ---
 echo "Building target: ${MAKE_TARGET}..."
-# We use 'make clean' first, but we ignore errors in case 'build/' doesn't exist yet
-make clean || true 
 make "${MAKE_TARGET}"
 
 # Double check that the target successfully created the binary
