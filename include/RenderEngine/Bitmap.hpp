@@ -7,14 +7,12 @@
 
 namespace RenderEngine {
 class Bitmap{
-    bool valid;
     size_t width_;
     size_t height_;
     unsigned char* data_;
-    std::string bitmapPath_;
 
 public:
-    Bitmap();
+    // Bitmap();
     Bitmap(std::string);
     Bitmap(Bitmap&&) noexcept;
     Bitmap& operator=(Bitmap&&) noexcept;

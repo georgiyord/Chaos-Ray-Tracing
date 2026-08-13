@@ -1,29 +1,26 @@
 #include <RenderEngine/Texture.hpp>
+#include <stdexcept>
 
 namespace RenderEngine {
-AlbedoTextureView Texture::asAlbedoTexture() noexcept {
-  return {internalName, color1};
-}
+AlbedoTextureView Texture::asAlbedoTexture() noexcept { return {color1}; }
 EdgesTextureView Texture::asEdgesTexture() noexcept {
-  return {internalName, color1, color2, extra};
+  return {color1, color2, extra};
 }
 CheckerTextureView Texture::asCheckerTexture() noexcept {
-  return {internalName, color1, color2, extra};
+  return {color1, color2, extra};
 }
-BitmapTextureView Texture::asBitmapTexture() noexcept {
-  return {internalName, bitmap};
+BitmapTextureView Texture::asBitmapTexture() noexcept { return {id_bitmap}; }
+const AlbedoTextureView Texture::asAlbedoTexture() const noexcept {
+  return const_cast<Texture *>(this)->asAlbedoTexture();
 }
-ConstAlbedoTextureView Texture::asAlbedoTexture() const noexcept {
-  return {internalName, color1};
+const EdgesTextureView Texture::asEdgesTexture() const noexcept {
+  return const_cast<Texture *>(this)->asEdgesTexture();
 }
-ConstEdgesTextureView Texture::asEdgesTexture() const noexcept {
-  return {internalName, color1, color2, extra};
+const CheckerTextureView Texture::asCheckerTexture() const noexcept {
+  return const_cast<Texture *>(this)->asCheckerTexture();
 }
-ConstCheckerTextureView Texture::asCheckerTexture() const noexcept {
-  return {internalName, color1, color2, extra};
-}
-ConstBitmapTextureView Texture::asBitmapTexture() const noexcept {
-  return {internalName, bitmap};
+const BitmapTextureView Texture::asBitmapTexture() const noexcept {
+  return const_cast<Texture *>(this)->asBitmapTexture();
 }
 
 [[nodiscard]] TextureType getTextureTypeFromString(const std::string &str) {
@@ -42,17 +39,21 @@ ConstBitmapTextureView Texture::asBitmapTexture() const noexcept {
   }
 }
 
-Texture Texture::createAlbedoTexture(std::string name, Color albedo) noexcept {
-  return {name, TextureType::ALBEDO, albedo, {}, {}, {}};
+Texture Texture::createAlbedoTexture(const Color &albedo) noexcept {
+  return {TextureType::ALBEDO, albedo, {}, {}, {}};
 }
-Texture Texture::createEdgesTexture(std::string name, Color inner_color, Color edge_color, double edge_width) noexcept {
-  return {name, TextureType::EDGES, inner_color, edge_color, edge_width, {}};
+Texture Texture::createEdgesTexture(const Color &inner_color,
+                                    const Color &edge_color,
+                                    const double edge_width) noexcept {
+  return {TextureType::EDGES, inner_color, edge_color, edge_width, {}};
 }
-Texture Texture::createCheckerTexture(std::string name, Color color_A, Color color_B, double square_size) noexcept {
-  return {name, TextureType::CHECKER, color_A, color_B, square_size, {}};
+Texture Texture::createCheckerTexture(const Color &color_A,
+                                      const Color &color_B,
+                                      const double square_size) noexcept {
+  return {TextureType::CHECKER, color_A, color_B, square_size, {}};
 }
-Texture Texture::createBitmapTexture(std::string name, std::string bitmapPath) {
-  return {name, TextureType::BITMAP, {}, {}, {}, {bitmapPath}};
+Texture Texture::createBitmapTexture(const size_t id_bitmap) {
+  return {TextureType::BITMAP, {}, {}, {}, id_bitmap};
 }
 
 } // namespace RenderEngine

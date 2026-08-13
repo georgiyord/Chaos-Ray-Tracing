@@ -11,7 +11,6 @@ struct Ray {
   // returns the distance from the ray origin to the intersection point, or NaN
   // if the ray doesn't intersect the triangle.
   Ray(vec3, vec3, size_t = 5) noexcept;
-  Ray() noexcept;
 };
 }; // namespace RenderEngine
 

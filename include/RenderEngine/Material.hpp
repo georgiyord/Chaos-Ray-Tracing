@@ -9,11 +9,10 @@ enum class MaterialType { DIFFUSE, REFLECTIVE, REFRACTIVE, CONSTANT };
 getMaterialTypeFromString(const std::string &str);
 
 struct Material {
-  MaterialType materialType_ = MaterialType::CONSTANT;
-  std::string textureName;
-  bool smoothShading_ = false;
-  double ior_ = 1;
-  
+  MaterialType materialType = MaterialType::CONSTANT;
+  size_t textureId;
+  bool smoothShading = false;
+  double ior = 1;
 };
 } // namespace RenderEngine
 

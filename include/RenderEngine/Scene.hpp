@@ -1,20 +1,23 @@
 #ifndef RENDERENGINE_SCENE_HPP
 #define RENDERENGINE_SCENE_HPP
 
+#include "RenderEngine/AccelerationTree.hpp"
+#include "RenderEngine/Bitmap.hpp"
 #include "RenderEngine/Camera.hpp"
 #include "RenderEngine/Color.hpp"
 #include "RenderEngine/Light.hpp"
 #include "RenderEngine/Material.hpp"
 #include "RenderEngine/Mesh.hpp"
 #include "RenderEngine/Texture.hpp"
+#include "RenderEngine/Triangle.hpp"
+#include "RenderEngine/Vertex.hpp"
 #include "RenderEngine/utils.hpp"
 #include "RenderEngine/vec2.hpp"
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace RenderEngine {
-class Scene {
+struct Scene {
   struct Settings {
     Color backgroundColor;
     struct ImageSettings {
@@ -27,34 +30,26 @@ class Scene {
   Settings settings_;
   Camera camera_;
   std::vector<Light> lights_;
-  std::unordered_map<std::string, Texture> textures_;
+  std::vector<Bitmap> bitmaps_;
+  std::vector<Texture> textures_;
   std::vector<Material> materials_;
+  std::vector<Vertex> vertices_;
+  std::vector<Triangle> triangles_;
+  std::vector<vec3> triangleNormals_;
   std::vector<Mesh> meshes_;
+  AccelerationTree accelerationTree_;
 
-  Scene(Settings &&, Camera &&, std::vector<Light> &&,
-        std::unordered_map<std::string, Texture> &&, std::vector<Material> &&,
-        std::vector<Mesh> &&);
+  Scene(Settings &&, Camera &&, std::vector<Light> &&, std::vector<Bitmap> &&,
+        std::vector<Texture> &&, std::vector<Material> &&,
+        std::vector<Vertex> &&, std::vector<Triangle> &&, std::vector<vec3> &&,
+        std::vector<Mesh> &&, AccelerationTree&&);
+
+  [[nodiscard]] bool intersectsFast(const Ray &, const size_t,
+                                    const double) const noexcept;
 
   [[nodiscard]] double traceShadowRay(const vec3 &rayOrigin,
                                       const vec3 &surfaceNormal) const;
   [[nodiscard]] Color traceRay(const Ray &, RenderMode) const;
-
-  [[nodiscard]] Color
-  handleDiffuseMaterial(const Mesh::IntersectResult &) const noexcept;
-  [[nodiscard]] Color handleReflectiveMaterial(const Mesh::IntersectResult &,
-                                               const Ray &) const noexcept;
-  [[nodiscard]] Color handleRefractiveMaterial(const Mesh::IntersectResult &,
-                                               const Ray &) const noexcept;
-
-  [[nodiscard]] Color goochShade(const Mesh::IntersectResult &) const noexcept;
-  [[nodiscard]] static vec3
-  interpolateNormal(const vec3 &, const std::array<const vec3 *, 3> &,
-                    const std::array<const vec3 *, 3> &) noexcept;
-  [[nodiscard]] static vec2
-  getBarycentricCoordinates(const vec3 &,
-                            const std::array<const vec3 *, 3> &) noexcept;
-  [[nodiscard]] Color
-  getTextureColor(const Mesh::IntersectResult &intersectResult) const;
 
 public:
   [[nodiscard]] static Scene loadScene(const std::string &filename);

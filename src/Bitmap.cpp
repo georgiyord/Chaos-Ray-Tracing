@@ -30,8 +30,7 @@
 #endif
 
 namespace RenderEngine {
-Bitmap::Bitmap() : valid(false) {}
-Bitmap::Bitmap(std::string bitmapPath) : valid(true) {
+Bitmap::Bitmap(std::string bitmapPath) {
   int tmpWidth, tmpHeight;
   data_ = stbi_load(bitmapPath.c_str(), &tmpWidth, &tmpHeight, nullptr, 3);
   if (data_ == nullptr) {
@@ -54,7 +53,6 @@ Bitmap::Bitmap(Bitmap &&rhs) noexcept {
   height_ = rhs.height_;
   data_ = rhs.data_;
   rhs.data_ = nullptr;
-  bitmapPath_ = std::move(rhs.bitmapPath_);
 }
 Bitmap &Bitmap::operator=(Bitmap &&rhs) noexcept {
   if (&rhs != this) {
@@ -63,7 +61,6 @@ Bitmap &Bitmap::operator=(Bitmap &&rhs) noexcept {
     stbi_image_free(data_);
     data_ = rhs.data_;
     rhs.data_ = nullptr;
-    bitmapPath_ = std::move(rhs.bitmapPath_);
   }
   return *this;
 }
