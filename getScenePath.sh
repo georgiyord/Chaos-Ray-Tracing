@@ -17,4 +17,9 @@ if [ ! -e "$out" ]; then
     nix build ".#${package}" --no-link
 fi
 
-echo "$out/$(nix eval --raw ".#${package}.scene")"
+scene="$(nix eval --raw ".#${package}.scene")"
+if [ -z "$scene" ]; then
+    echo "$out"
+else
+    echo "$out/$scene"
+fi
