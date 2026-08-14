@@ -1,3 +1,4 @@
+#include "RenderEngine/Renderer.hpp"
 #include <charconv>
 #include <cmath>
 #include <cstdlib>
@@ -202,8 +203,9 @@ int main(int argc, char **argv) {
         !std::isnan(programSettings.backgroundColor.blue())) {
       scene.overwriteBackgroundColor(programSettings.backgroundColor);
     }
-    // scene.overwriteMaxRayDepth(1);
-    scene.cameraTakeSnapshot(programSettings.outPath, programSettings.renderMode);
+    Renderer renderer(scene);
+    // renderer.overwriteMaxRayDepth(1);
+    renderer.takeSnapshot(programSettings.outPath, programSettings.renderMode);
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << '\n';
     return 1;
