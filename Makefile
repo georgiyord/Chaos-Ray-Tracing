@@ -10,7 +10,7 @@ CXXFLAGS = -std=c++26 -I./include/ -Wall -Wextra -Wpedantic -Wshadow -Wconversio
 
 CXXFLAGS_DEBUG   = $(CXXFLAGS) -g -O0 -fsanitize=address,undefined -fno-omit-frame-pointer -DDEBUG
 CXXFLAGS_RELEASE_SYMBOLS = $(CXXFLAGS) -g -O3 -flto=auto $(WERROR) -DNDEBUG
-CXXFLAGS_RELEASE = $(CXXFLAGS) -O3 -flto=auto $(WERROR) -DNDEBUG
+CXXFLAGS_RELEASE = $(CXXFLAGS) -s -O3 -flto=auto $(WERROR) -DNDEBUG
 
 SRCS := $(wildcard src/*.cpp)
 
