@@ -140,7 +140,7 @@
 
         shellHook = ''
           make clean
-          bear -- make debug CXX=${pkgs.gcc16}/bin/g++
+          bear -- make debug
         '';
       };
 
@@ -157,6 +157,7 @@
         CRT10 = mkCRT "10" "sha256-KrdWV6+mH5qz6Bax1KyX1zdk013hObAqnEvOjZGrUSE=";
         CRT11 = CRT10;
         CRT12 = mkCRT "12" "sha256-AHInC1yJ5TB3KMtN5g1rj5H90RH3xOF0k+4qiwXN6bc=";
+        CRT14 = mkCRT "14" "";
 
         CRT07-Scene0 = fetchGoogleDrive {
           driveFileId = "12j-m2eP7bGAIVHLf71Y5avSc0gKTScro";
@@ -319,6 +320,16 @@
             "textures/dragon.jpg" = "textures/dragon.jpg";
           };
         };
+      };
+
+      CRT13-Scene0 = patchScene {
+        package = (
+          fetchGoogleDrive {
+            driveFileId = "1GtTwgo-wr-RdTTCnnDjn33sWaH7_iF-5";
+            hash = "sha256-qRIIojMAfJhbHnG9AbG7rSaPeEUetdXejA2FHAqxcQc=";
+          }
+        );
+        jqFilter = materialsToTexturesFilter;
       };
 
       CRT14-Scene0 = patchScene {
