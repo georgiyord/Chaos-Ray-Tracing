@@ -158,7 +158,7 @@
         CRT11 = CRT10;
         CRT12 = mkCRT "12" "sha256-AHInC1yJ5TB3KMtN5g1rj5H90RH3xOF0k+4qiwXN6bc=";
         CRT14 = mkCRT "14" "sha256-SFauuOgZ4h99SzYNukVpsFMtO8Vx8vNYDhNtEJCvd9s=";
-        CRT13 = mkCRT "13" "";
+        CRT13 = mkCRT "13" "sha256-dS1CzWrzF+8t+OYfMZex3nGx3bmo58Ak8eBrGVd0UM0=";
 
         CRT07-Scene0 = fetchGoogleDrive {
           driveFileId = "12j-m2eP7bGAIVHLf71Y5avSc0gKTScro";
