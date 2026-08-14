@@ -9,6 +9,7 @@
 #include "RenderEngine/Material.hpp"
 #include "RenderEngine/Mesh.hpp"
 #include "RenderEngine/Texture.hpp"
+#include "RenderEngine/ThreadPool.hpp"
 #include "RenderEngine/Triangle.hpp"
 #include "RenderEngine/Vertex.hpp"
 #include "RenderEngine/utils.hpp"
@@ -23,6 +24,7 @@ struct Scene {
     struct ImageSettings {
       size_t width;
       size_t height;
+      size_t bucket_size;
     } imageSettings;
     size_t rayMaxDepth = 5;
   };
@@ -38,11 +40,12 @@ struct Scene {
   std::vector<vec3> triangleNormals_;
   std::vector<Mesh> meshes_;
   AccelerationTree accelerationTree_;
+  ThreadPool &threadPool_;
 
   Scene(Settings &&, Camera &&, std::vector<Light> &&, std::vector<Bitmap> &&,
         std::vector<Texture> &&, std::vector<Material> &&,
         std::vector<Vertex> &&, std::vector<Triangle> &&, std::vector<vec3> &&,
-        std::vector<Mesh> &&, AccelerationTree&&);
+        std::vector<Mesh> &&, AccelerationTree &&);
 
   [[nodiscard]] bool intersectsFast(const Ray &, const size_t,
                                     const double) const noexcept;
@@ -58,6 +61,9 @@ public:
   void
   cameraTakeSnapshot(const std::string &outFileName,
                      RenderMode debugRenderMode = RenderMode::Default) const;
+
+  void renderBucket(const size_t, const size_t, Color *const,
+                    RenderMode) const noexcept;
 
   [[nodiscard]] Settings settings() const noexcept;
 

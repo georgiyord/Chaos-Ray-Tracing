@@ -10,6 +10,7 @@
 #include "RenderEngine/Material.hpp"
 #include "RenderEngine/Mesh.hpp"
 #include "RenderEngine/Texture.hpp"
+#include "RenderEngine/ThreadPool.hpp"
 #include "RenderEngine/Triangle.hpp"
 #include "RenderEngine/Vertex.hpp"
 #include "RenderEngine/utils.hpp"
@@ -27,9 +28,11 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <stack>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -61,7 +64,8 @@ Scene::Scene(Settings &&settings, Camera &&camera, std::vector<Light> &&lights,
       textures_{std::move(textures)}, materials_{std::move(materials)},
       vertices_{std::move(vertices)}, triangles_{std::move(triangles)},
       triangleNormals_{std::move(triangleNormals)}, meshes_{std::move(meshes)},
-      accelerationTree_{std::move(accelerationTree)} {}
+      accelerationTree_{std::move(accelerationTree)},
+      threadPool_{ThreadPool::getInstance()} {}
 
 [[nodiscard]] IntersectResult intersects(const Scene &scene, const Ray &ray,
                                          size_t id_triangle) noexcept {
@@ -213,7 +217,10 @@ interpolateNormal(const Scene &scene,
         cosineLawFactor;
     bool shadowRayIntersection = false;
     IntersectResult intersectResult;
-    const std::vector<size_t> trianglIds = accelerationTree_.intersects(ray);
+    std::vector<size_t> trianglIds;
+    accelerationTree_.intersects(ray, trianglIds);
+    trianglIds.erase(std::unique(trianglIds.begin(), trianglIds.end()),
+                     trianglIds.end());
     if (trianglIds.empty()) {
       finalLightReached += tmpLight;
       continue;
@@ -342,7 +349,10 @@ goochShade(const Scene &scene,
 [[nodiscard]] Color Scene::traceRay(const Ray &ray,
                                     RenderMode debugRenderMode) const {
   IntersectResult intersectResult;
-  const std::vector<size_t> trianglIds = accelerationTree_.intersects(ray);
+  std::vector<size_t> trianglIds;
+  accelerationTree_.intersects(ray, trianglIds);
+  trianglIds.erase(std::unique(trianglIds.begin(), trianglIds.end()),
+                   trianglIds.end());
   if (trianglIds.empty()) {
     return settings_.backgroundColor;
   }
@@ -613,10 +623,15 @@ handleRefractiveMaterial(const Scene &scene,
   // verify scene file correctness outside of schema validation
   // matrix of camera and vertices indeces
   // albedo in materials that are not refractive
+
+  u64 bucket_size =
+      document["settings"]["image_settings"]["bucket_size"].GetUint64();
+  u64 width = document["settings"]["image_settings"]["width"].GetUint64();
+  u64 height = document["settings"]["image_settings"]["height"].GetUint64();
+
   Settings settings = {
       arrToColorObject(document["settings"]["background_color"]),
-      {document["settings"]["image_settings"]["width"].GetUint64(),
-       document["settings"]["image_settings"]["height"].GetUint64()}};
+      {width, height, bucket_size}};
 
   Camera camera = {arrToVec3(document["camera"]["position"]),
                    arrToMatrix3x3(document["camera"]["matrix"])};
@@ -801,23 +816,21 @@ handleRefractiveMaterial(const Scene &scene,
 
 [[nodiscard]] Camera &Scene::camera() noexcept { return camera_; }
 
-void Scene::cameraTakeSnapshot(const std::string &outFileName,
-                               RenderMode debugRenderMode) const {
-  const auto timerStart = std::chrono::steady_clock::now();
+void Scene::renderBucket(const size_t bucket, const size_t bucketCols,
+                         Color *const buffer,
+                         RenderMode debugRenderMode) const noexcept {
   const double resolutionWidth =
       static_cast<double>(settings_.imageSettings.width);
   const double resolutionHeight =
       static_cast<double>(settings_.imageSettings.height);
-  std::string outputFileBuffer =
-      "P3 " + std::to_string(settings_.imageSettings.width) + " " +
-      std::to_string(settings_.imageSettings.height) + " 255 ";
-  std::unique_ptr<Color[]> buffer(new Color[settings_.imageSettings.width *
-                                            settings_.imageSettings.height]);
-  double max_distance = 0.;
-  for (size_t y = 0; y < settings_.imageSettings.height; ++y) {
-    for (size_t x = 0; x < settings_.imageSettings.width; ++x) {
-      double worldX = static_cast<double>(x) + .5;
-      double worldY = static_cast<double>(y) + .5;
+  size_t bucketOffsetX =
+      (bucket % bucketCols) * settings_.imageSettings.bucket_size;
+  size_t bucketOffsetY =
+      (bucket / bucketCols) * settings_.imageSettings.bucket_size;
+  for (size_t y = 0; y < settings_.imageSettings.bucket_size; ++y) {
+    for (size_t x = 0; x < settings_.imageSettings.bucket_size; ++x) {
+      double worldX = static_cast<double>(bucketOffsetX + x) + .5;
+      double worldY = static_cast<double>(bucketOffsetY + y) + .5;
 
       worldX /= resolutionWidth;
       worldY /= resolutionHeight;
@@ -829,10 +842,47 @@ void Scene::cameraTakeSnapshot(const std::string &outFileName,
       vec3 direction{worldX, worldY, -1.0};
       direction = direction * camera_.orientation();
       Ray ray{camera_.position(), direction, settings_.rayMaxDepth};
-      buffer[x + y * settings_.imageSettings.width] =
+      buffer[(bucketOffsetX + x) +
+             (bucketOffsetY + y) * settings_.imageSettings.width] =
           traceRay(ray, debugRenderMode);
     }
   }
+}
+
+void Scene::cameraTakeSnapshot(const std::string &outFileName,
+                               RenderMode debugRenderMode) const {
+  const auto &width = settings_.imageSettings.width;
+  const auto &height = settings_.imageSettings.height;
+  const auto &bucket_size = settings_.imageSettings.bucket_size;
+  if (width % bucket_size != 0 || height % bucket_size != 0) {
+    throw std::runtime_error("width and height values must be a multiple of "
+                             "bucket_size(" +
+                             std::to_string(bucket_size) +
+                             ")! Padding is not supported.");
+  }
+  const auto timerStart = std::chrono::steady_clock::now();
+  std::string outputFileBuffer =
+      "P3 " + std::to_string(settings_.imageSettings.width) + " " +
+      std::to_string(settings_.imageSettings.height) + " 255 ";
+  std::unique_ptr<Color[]> buffer(new Color[settings_.imageSettings.width *
+                                            settings_.imageSettings.height]);
+
+  std::stack<size_t> bucketIdx;
+  for (size_t i = 0;
+       i < settings_.imageSettings.width * settings_.imageSettings.height /
+               settings_.imageSettings.bucket_size /
+               settings_.imageSettings.bucket_size;
+       ++i) {
+    threadPool_.addTask([this, &buffer, debugRenderMode, i]() {
+      renderBucket(i,
+                   settings_.imageSettings.width /
+                       settings_.imageSettings.bucket_size,
+                   buffer.get(), debugRenderMode);
+    });
+  }
+  threadPool_.startAndWait();
+
+  double max_distance = 0.;
   // this is a stupid way of doing this
   // TODO: change traceRay to return information about distance and hitpoint
   // besides color
@@ -855,7 +905,9 @@ void Scene::cameraTakeSnapshot(const std::string &outFileName,
     outputFileBuffer += buffer[i].getU8View().toString() + " ";
   }
   const auto timerEnd = std::chrono::steady_clock::now();
-  std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timerEnd - timerStart) << '\n';
+  std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timerEnd -
+                                                                     timerStart)
+            << '\n';
   std::ofstream image(outFileName, std::ios::trunc | std::ios::out);
   if (!image.is_open()) {
     throw std::runtime_error("Could not open " + outFileName + " for writing!");
