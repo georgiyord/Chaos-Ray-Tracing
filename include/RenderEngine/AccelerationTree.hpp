@@ -4,20 +4,9 @@
 #include "RenderEngine/AABB.hpp"
 #include "RenderEngine/Triangle.hpp"
 #include "RenderEngine/Vertex.hpp"
-#include <algorithm>
 #include <cstddef>
-#include <iterator>
 #include <limits>
-#include <utility>
 #include <vector>
-
-#ifndef RENDERENGINE_ACCELERATIONTREE_MAXDEPTH
-#define RENDERENGINE_ACCELERATIONTREE_MAXDEPTH 10
-#endif // RENDERENGINE_ACCELERATIONTREE_MAXDEPTH
-
-#ifndef RENDERENGINE_ACCELERATIONTREE_MINIMUM_TRIANGLES_IN_NODE
-#define RENDERENGINE_ACCELERATIONTREE_MINIMUM_TRIANGLES_IN_NODE 10
-#endif // RENDERENGINE_ACCELERATIONTREE_MINIMUM_TRIANGLES_IN_NODE
 
 namespace RenderEngine {
 struct AccelerationTreeNode {
@@ -32,11 +21,10 @@ class AccelerationTree {
   std::vector<AccelerationTreeNode> nodes;
 
 public:
-  AccelerationTree(const std::vector<Vertex> &vertices,
-                   const std::vector<Triangle> &triangles,
-                   const AABB &box) noexcept;
+  AccelerationTree(const std::vector<Vertex> &, const std::vector<Triangle> &,
+                   const AABB &) noexcept;
 
-  std::vector<size_t> intersects(const Ray &ray) const noexcept;
+  void intersects(const Ray &, std::vector<size_t> &) const noexcept;
 };
 } // namespace RenderEngine
 
