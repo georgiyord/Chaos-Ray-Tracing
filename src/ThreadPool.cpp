@@ -1,11 +1,23 @@
 #include "RenderEngine/ThreadPool.hpp"
 
+
+#ifdef DEBUG
+#ifndef RENDERENGINE_THREADPOOL_WORKERCOUNT
+#define RENDERENGINE_THREADPOOL_WORKERCOUNT 1
+#endif
+#else
+#ifndef RENDERENGINE_THREADPOOL_WORKERCOUNT
+#define RENDERENGINE_THREADPOOL_WORKERCOUNT (std::thread::hardware_concurrency())
+#endif
+#endif
+
+
 namespace RenderEngine {
 using TaskType = std::function<void()>;
 
 ThreadPool::ThreadPool()
     : exitFlag_(false), runFlag_(false),
-      workerCount_(std::thread::hardware_concurrency()),
+      workerCount_(RENDERENGINE_THREADPOOL_WORKERCOUNT),
       round_(static_cast<ptrdiff_t>(workerCount_ + 1), [this]() {
         std::unique_lock lock(tasksMutex_);
         runFlag_ = false;
