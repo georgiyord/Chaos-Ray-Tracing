@@ -90,20 +90,36 @@
             | .value.albedo = (if (.value.albedo|type) == "array" then ("albedo_" + (.key|tostring)) else .value.albedo end)
             | .value
           ]
-        | .objects |= map(if has("uvs") then . else .uvs = (.vertices | map(0)) end)
+      '';
+      dummyUvsFilter = ''
+        .objects |= map(if has("uvs") then . else .uvs = (.vertices | map(0)) end)
+      '';
+      defaultMaterialsFilter = ''
+        (if (has("materials") and ((.materials | length) > 0)) then .
+         else
+           .materials = [ { type: "diffuse", albedo: [0.5, 0.5, 0.5], smooth_shading: false } ]
+         end)
+        | .objects |= map(if has("material_index") then . else .material_index = 0 end)
+      '';
+      bucketSizeFilter = ''
+        .settings.image_settings.bucket_size //= 24
       '';
       patchScene =
         {
           package,
-          jqFilter,
+          jqFilters,
         }:
-        pkgs.stdenv.mkDerivation {
+        pkgs.stdenv.mkDerivation rec {
           name = package.name + "-patched";
           src = package;
           dontUnpack = true;
           nativeBuildInputs = with pkgs; [
             jq
           ];
+
+          jqCommands = builtins.concatStringsSep "\n" (
+            map (x: "jq '${x}' \"$srcFile\" > \"$srcFile.tmp\" \ && mv \"$srcFile.tmp\" \"$srcFile\"") jqFilters
+          );
 
           installPhase = ''
             if [ -z "${package.passthru.scene}" ]; then
@@ -114,9 +130,8 @@
               chmod -R u+w "$out"
               srcFile="$out/${package.passthru.scene}"
             fi
-            jq '${jqFilter}' "$srcFile" > "$srcFile.tmp" \
-              && mv "$srcFile.tmp" "$srcFile"
-          '';
+          ''
+          + jqCommands;
 
           passthru = {
             scene = package.passthru.scene;
