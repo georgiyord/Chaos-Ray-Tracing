@@ -5,7 +5,7 @@
 #include <limits>
 #include <type_traits>
 
-#define RENDERENGINE_HITPOINT_BIAS 1e-15
+#define RENDERENGINE_HITPOINT_BIAS 1e-10
 #define RENDERENGINE_SHADOW_BIAS 5e-2
 
 namespace RenderEngine {
