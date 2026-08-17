@@ -45,13 +45,13 @@ libReleaseWithSymbols: build/ReleaseWithSymbols/libRenderEngine.a
 	$(CXX) $(CXXFLAGS_RELEASE_SYMBOLS) $(OBJS_RELEASE_SYMBOLS) -o $@
 
 build/Debug/libRenderEngine.a: $(LIB_OBJS_DEBUG) | build/Debug
-	ar rcs $@ $(LIB_OBJS_DEBUG)
+	gcc-ar rcs $@ $(LIB_OBJS_DEBUG)
 
 build/Release/libRenderEngine.a: $(LIB_OBJS_RELEASE) | build/Release
-	ar rcs $@ $(LIB_OBJS_RELEASE)
+	gcc-ar rcs $@ $(LIB_OBJS_RELEASE)
 
 build/ReleaseWithSymbols/libRenderEngine.a: $(LIB_OBJS_RELEASE_SYMBOLS) | build/ReleaseWithSymbols
-	ar rcs $@ $(LIB_OBJS_RELEASE_SYMBOLS)
+	gcc-ar rcs $@ $(LIB_OBJS_RELEASE_SYMBOLS)
 
 build/Debug/%.o: src/%.cpp | build/Debug
 	$(CXX) $(CXXFLAGS_DEBUG) -MMD -MP -c $< -o $@
