@@ -139,7 +139,7 @@
         inputsFrom = with pkgs; [ ];
 
         shellHook = ''
-          make clean
+          rm -rf build/Debug
           bear -- make debug
         '';
       };
