@@ -290,12 +290,6 @@ interpolateNormal(const Scene &scene,
 [[nodiscard]] Color
 goochShade(const Scene &scene,
            const IntersectResult &intersectResult) noexcept {
-  if (scene.materials_[intersectResult.id_material].materialType ==
-          MaterialType::REFLECTIVE ||
-      scene.materials_[intersectResult.id_material].materialType ==
-          MaterialType::REFRACTIVE) {
-    return Colors::White;
-  }
   const Color cold = {0, 0, .55};
   const Color warm = {.3, .3, 0};
   const double warmFactor = .6;
