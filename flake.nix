@@ -7,6 +7,58 @@
     { self, nixpkgs, ... }:
     let
       pkgs = nixpkgs.legacyPackages.x86_64-linux;
+      mkRenderEngineExecutable =
+        mode:
+        let
+          binary = {
+            debug = "build/Debug/crt_debug";
+            release = "build/Release/crt_release";
+            releaseWithSymbols = "build/ReleaseWithSymbols/crt_release";
+          }.${mode};
+        in
+        pkgs.stdenv.mkDerivation {
+          pname = "RenderEngine";
+          name = "RenderEngine-${mode}";
+          src = self;
+
+          buildPhase = ''
+            make ${mode}
+          '';
+
+          installPhase = ''
+            mkdir -p $out/bin
+            cp ${binary} $out/bin/crt_render
+          '';
+        };
+      mkRenderEngineLib =
+        mode:
+        let
+          makeTarget = {
+            debug = "libDebug";
+            release = "libRelease";
+            releaseWithSymbols = "libReleaseWithSymbols";
+          }.${mode};
+          libPath = {
+            debug = "build/Debug/libRenderEngine.a";
+            release = "build/Release/libRenderEngine.a";
+            releaseWithSymbols = "build/ReleaseWithSymbols/libRenderEngine.a";
+          }.${mode};
+        in
+        pkgs.stdenv.mkDerivation {
+          pname = "RenderEngine";
+          name = "RenderEngine-lib-${mode}";
+          src = self;
+
+          buildPhase = ''
+            make ${makeTarget}
+          '';
+
+          installPhase = ''
+            mkdir -p $out/lib $out/include
+            cp ${libPath} $out/lib/
+            cp -r include/. $out/include/
+          '';
+        };
       mkCRT =
         N: hash:
         pkgs.stdenv.mkDerivation {
@@ -345,7 +397,10 @@
             hash = "sha256-qRIIojMAfJhbHnG9AbG7rSaPeEUetdXejA2FHAqxcQc=";
           }
         );
-        jqFilter = materialsToTexturesFilter;
+        jqFilters = [
+          materialsToTexturesFilter
+          dummyUvsFilter
+        ];
       };
 
       CRT14-Scene0 = patchScene {
@@ -355,7 +410,10 @@
             hash = "sha256-vJJiUIfmKj2kst/1q2/gjbOhJwHi+5QQuvnA0aH/8wI=";
           }
         );
-        jqFilter = materialsToTexturesFilter;
+        jqFilters = [
+          materialsToTexturesFilter
+          dummyUvsFilter
+        ];
       };
       CRT14-Scene1 = patchScene {
         package = (
@@ -364,7 +422,65 @@
             hash = "sha256-qRIIojMAfJhbHnG9AbG7rSaPeEUetdXejA2FHAqxcQc=";
           }
         );
-        jqFilter = materialsToTexturesFilter;
+        jqFilters = [
+          materialsToTexturesFilter
+          dummyUvsFilter
+        ];
+      };
+
+      CRT15-Scene0 = patchScene {
+        package = (
+          fetchGoogleDrive {
+            driveFileId = "1c5kfH0FZvriRXFciO-H83o4anfMHV0Ji";
+            hash = "sha256-kKm8MtrCROAtfzcp6zrIBk7PkhKXt+E7RcNXLRzF2V8=";
+          }
+        );
+        jqFilters = [
+          defaultMaterialsFilter
+          materialsToTexturesFilter
+          dummyUvsFilter
+          bucketSizeFilter
+        ];
+      };
+      CRT15-Scene1 = patchScene {
+        package = (
+          fetchGoogleDrive {
+            driveFileId = "1C5rme2DawvmwWCJU7_q03loOROS_iPQN";
+            hash = "sha256-RGNUWXE9HUo9X1DgrnE1Dh4vJ25mgPPEbLX5yM9P32k=";
+          }
+        );
+        jqFilters = [
+          # ".lights |= map(if (.position | length) == 4 then .position = (.position[1:]) else . end)"
+          ".lights |= map(if (.position | length) == 4 then .position = (.position[:-1]) else . end)"
+          materialsToTexturesFilter
+          dummyUvsFilter
+          bucketSizeFilter
+        ];
+      };
+      CRT15-Scene2 = patchScene {
+        package = (
+          fetchGoogleDrive {
+            driveFileId = "1KZVKypLppihsmYzUmuRlTu6zQLJZh0r8";
+            hash = "sha256-YSsOp/YzXHeHXsx2HJzB4e+oPHZM5/atzFUhjYRuD7c=";
+          }
+        );
+        jqFilters = [
+          materialsToTexturesFilter
+          dummyUvsFilter
+        ];
+      };
+
+      RenderEngine = {
+        debugExecutable = {
+          debug = mkRenderEngineExecutable "debug";
+          release = mkRenderEngineExecutable "release";
+          releaseWithSymbols = mkRenderEngineExecutable "releaseWithSymbols";
+        };
+        lib = {
+          debug = mkRenderEngineLib "debug";
+          release = mkRenderEngineLib "release";
+          releaseWithSymbols = mkRenderEngineLib "releaseWithSymbols";
+        };
       };
     };
 }
