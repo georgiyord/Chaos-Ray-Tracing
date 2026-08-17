@@ -207,7 +207,8 @@ int main(int argc, char **argv) {
     Renderer renderer(scene);
     // renderer.overwriteMaxRayDepth(1);
     auto buffer = renderer.createColorBuffer();
-    renderer.takeSnapshot(buffer, programSettings.renderMode);
+    auto time = renderer.takeSnapshot(buffer, programSettings.renderMode);
+    std::cout << time << std::endl;
     //   }
     //   const auto timerStart = std::chrono::steady_clock::now();
     std::string outputFileBuffer = "P3 " + std::to_string(scene.width_) + " " +

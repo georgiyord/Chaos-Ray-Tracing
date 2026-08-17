@@ -4,7 +4,6 @@
 #include "RenderEngine/Renderer.hpp"
 #include "RenderEngine/AccelerationTree.hpp"
 #include "RenderEngine/Color.hpp"
-#include "RenderEngine/ColorView.tpp"
 #include "RenderEngine/Material.hpp"
 #include "RenderEngine/Scene.hpp"
 #include "RenderEngine/Texture.hpp"
@@ -17,9 +16,6 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
-#include <fstream>
-#include <iostream>
-#include <memory>
 #include <stack>
 #include <stdexcept>
 #include <string>
@@ -567,7 +563,7 @@ Color* Renderer::createColorBuffer() const {
   return new Color[scene_.width_ * scene_.height_];
 }
 
-void Renderer::takeSnapshot(Color* const buffer, RenderMode debugRenderMode) const {
+std::chrono::milliseconds Renderer::takeSnapshot(Color* const buffer, RenderMode debugRenderMode) const {
   const auto &width = scene_.width_;
   const auto &height = scene_.height_;
   const auto &bucket_size = scene_.bucket_size_;
@@ -604,9 +600,7 @@ void Renderer::takeSnapshot(Color* const buffer, RenderMode debugRenderMode) con
     }
   }
   const auto timerEnd = std::chrono::steady_clock::now();
-  std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timerEnd -
-                                                                     timerStart)
-            << '\n';
+  return std::chrono::duration_cast<std::chrono::milliseconds>(timerEnd - timerStart);
 }
 
 void Renderer::overwriteMaxRayDepth(size_t value) noexcept {
