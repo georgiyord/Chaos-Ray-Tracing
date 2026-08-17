@@ -1,6 +1,7 @@
 .DEFAULT_GOAL := help
 help:
 	@echo "Specify a target: make debug | make release | make releaseWithSymbols | make clean"
+	@echo "Library targets:  make libDebug | make libRelease | make libReleaseWithSymbols"
 
 DEFINITIONS ?=
 WERROR ?= -Werror
@@ -9,14 +10,18 @@ CXX      = g++
 CXXFLAGS = -std=c++26 -I./include/ -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wdouble-promotion $(DEFINITIONS)
 
 CXXFLAGS_DEBUG   = $(CXXFLAGS) -g -O0 -fsanitize=address,undefined -fno-omit-frame-pointer -DDEBUG
-CXXFLAGS_RELEASE_SYMBOLS = $(CXXFLAGS) -g -O3 -flto=auto $(WERROR) -DNDEBUG
-CXXFLAGS_RELEASE = $(CXXFLAGS) -s -O3 -flto=auto $(WERROR) -DNDEBUG
+CXXFLAGS_RELEASE_SYMBOLS = $(CXXFLAGS) -g -O3 -march=native -flto=auto $(WERROR) -DNDEBUG
+CXXFLAGS_RELEASE = $(CXXFLAGS) -s -O3 -march=native -flto=auto $(WERROR) -DNDEBUG
 
 SRCS := $(wildcard src/*.cpp)
 
 OBJS_DEBUG   := $(patsubst src/%.cpp, build/Debug/%.o, $(SRCS))
 OBJS_RELEASE := $(patsubst src/%.cpp, build/Release/%.o, $(SRCS))
 OBJS_RELEASE_SYMBOLS := $(patsubst src/%.cpp, build/ReleaseWithSymbols/%.o, $(SRCS))
+
+LIB_OBJS_DEBUG   := $(filter-out build/Debug/main.o, $(OBJS_DEBUG))
+LIB_OBJS_RELEASE := $(filter-out build/Release/main.o, $(OBJS_RELEASE))
+LIB_OBJS_RELEASE_SYMBOLS := $(filter-out build/ReleaseWithSymbols/main.o, $(OBJS_RELEASE_SYMBOLS))
 
 DEPS_DEBUG   := $(OBJS_DEBUG:.o=.d)
 DEPS_RELEASE := $(OBJS_RELEASE:.o=.d)
@@ -26,6 +31,10 @@ debug: ./build/Debug/crt_debug
 release: ./build/Release/crt_release
 releaseWithSymbols: ./build/ReleaseWithSymbols/crt_release
 
+libDebug: build/Debug/libRenderEngine.a
+libRelease: build/Release/libRenderEngine.a
+libReleaseWithSymbols: build/ReleaseWithSymbols/libRenderEngine.a
+
 ./build/Debug/crt_debug: $(OBJS_DEBUG) | build/Debug
 	$(CXX) $(CXXFLAGS_DEBUG) $(OBJS_DEBUG) -o $@
 
@@ -34,6 +43,15 @@ releaseWithSymbols: ./build/ReleaseWithSymbols/crt_release
 
 ./build/ReleaseWithSymbols/crt_release: $(OBJS_RELEASE_SYMBOLS) | build/Release
 	$(CXX) $(CXXFLAGS_RELEASE_SYMBOLS) $(OBJS_RELEASE_SYMBOLS) -o $@
+
+build/Debug/libRenderEngine.a: $(LIB_OBJS_DEBUG) | build/Debug
+	ar rcs $@ $(LIB_OBJS_DEBUG)
+
+build/Release/libRenderEngine.a: $(LIB_OBJS_RELEASE) | build/Release
+	ar rcs $@ $(LIB_OBJS_RELEASE)
+
+build/ReleaseWithSymbols/libRenderEngine.a: $(LIB_OBJS_RELEASE_SYMBOLS) | build/ReleaseWithSymbols
+	ar rcs $@ $(LIB_OBJS_RELEASE_SYMBOLS)
 
 build/Debug/%.o: src/%.cpp | build/Debug
 	$(CXX) $(CXXFLAGS_DEBUG) -MMD -MP -c $< -o $@
@@ -63,4 +81,4 @@ clean:
 -include $(DEPS_RELEASE)
 -include $(DEPS_RELEASE_SYMBOLS)
 
-.PHONY: debug release releaseWithSymbols clean help
+.PHONY: debug release releaseWithSymbols libDebug libRelease libReleaseWithSymbols clean help
