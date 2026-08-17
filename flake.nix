@@ -10,11 +10,13 @@
       mkRenderEngineExecutable =
         mode:
         let
-          binary = {
-            debug = "build/Debug/crt_debug";
-            release = "build/Release/crt_release";
-            releaseWithSymbols = "build/ReleaseWithSymbols/crt_release";
-          }.${mode};
+          binary =
+            {
+              debug = "build/Debug/crt_debug";
+              release = "build/Release/crt_release";
+              releaseWithSymbols = "build/ReleaseWithSymbols/crt_release";
+            }
+            .${mode};
         in
         pkgs.stdenv.mkDerivation {
           pname = "RenderEngine";
@@ -33,16 +35,20 @@
       mkRenderEngineLib =
         mode:
         let
-          makeTarget = {
-            debug = "libDebug";
-            release = "libRelease";
-            releaseWithSymbols = "libReleaseWithSymbols";
-          }.${mode};
-          libPath = {
-            debug = "build/Debug/libRenderEngine.a";
-            release = "build/Release/libRenderEngine.a";
-            releaseWithSymbols = "build/ReleaseWithSymbols/libRenderEngine.a";
-          }.${mode};
+          makeTarget =
+            {
+              debug = "libDebug";
+              release = "libRelease";
+              releaseWithSymbols = "libReleaseWithSymbols";
+            }
+            .${mode};
+          libPath =
+            {
+              debug = "build/Debug/libRenderEngine.a";
+              release = "build/Release/libRenderEngine.a";
+              releaseWithSymbols = "build/ReleaseWithSymbols/libRenderEngine.a";
+            }
+            .${mode};
         in
         pkgs.stdenv.mkDerivation {
           pname = "RenderEngine";
@@ -59,6 +65,16 @@
             cp -r include/. $out/include/
           '';
         };
+      mkRenderEngineHeaders = pkgs.stdenv.mkDerivation {
+        pname = "RenderEngine";
+        name = "RenderEngine-headers";
+        src = self;
+
+        installPhase = ''
+          mkdir -p $out/include
+          cp -r include/. $out/include/
+        '';
+      };
       mkCRT =
         N: hash:
         pkgs.stdenv.mkDerivation {
@@ -481,6 +497,7 @@
           release = mkRenderEngineLib "release";
           releaseWithSymbols = mkRenderEngineLib "releaseWithSymbols";
         };
+        headers = mkRenderEngineHeaders;
       };
     };
 }
