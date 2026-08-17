@@ -2,11 +2,12 @@
 #include <charconv>
 #include <cmath>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
-#include <ostream>
 #include <string>
 #include <string_view>
 
+#include <RenderEngine/ColorView.tpp>
 #include <RenderEngine/Scene.hpp>
 #include <RenderEngine/utils.hpp>
 
@@ -205,7 +206,23 @@ int main(int argc, char **argv) {
     }
     Renderer renderer(scene);
     // renderer.overwriteMaxRayDepth(1);
-    renderer.takeSnapshot(programSettings.outPath, programSettings.renderMode);
+    auto buffer = renderer.createColorBuffer();
+    renderer.takeSnapshot(buffer, programSettings.renderMode);
+    //   }
+    //   const auto timerStart = std::chrono::steady_clock::now();
+    std::string outputFileBuffer = "P3 " + std::to_string(scene.width_) + " " +
+                                   std::to_string(scene.height_) + " 255 ";
+    for (size_t i = 0; i < scene.width_ * scene.height_; ++i) {
+      outputFileBuffer += buffer[i].getU8View().toString() + " ";
+    }
+    std::ofstream image(programSettings.outPath,
+                        std::ios::trunc | std::ios::out);
+    if (!image.is_open()) {
+      throw std::runtime_error("Could not open " + programSettings.outPath +
+                               " for writing!");
+    }
+    image << outputFileBuffer;
+
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << '\n';
     return 1;

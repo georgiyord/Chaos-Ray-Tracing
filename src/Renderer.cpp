@@ -563,8 +563,11 @@ void renderBucket(const Scene &scene, const size_t bucket,
   }
 }
 
-void Renderer::takeSnapshot(const std::string &outFileName,
-                            RenderMode debugRenderMode) const {
+Color* Renderer::createColorBuffer() const {
+  return new Color[scene_.width_ * scene_.height_];
+}
+
+void Renderer::takeSnapshot(Color* const buffer, RenderMode debugRenderMode) const {
   const auto &width = scene_.width_;
   const auto &height = scene_.height_;
   const auto &bucket_size = scene_.bucket_size_;
@@ -575,16 +578,13 @@ void Renderer::takeSnapshot(const std::string &outFileName,
                              ")! Padding is not supported.");
   }
   const auto timerStart = std::chrono::steady_clock::now();
-  std::string outputFileBuffer = "P3 " + std::to_string(scene_.width_) + " " +
-                                 std::to_string(scene_.height_) + " 255 ";
-  std::unique_ptr<Color[]> buffer(new Color[scene_.width_ * scene_.height_]);
 
   std::stack<size_t> bucketIdx;
   for (size_t i = 0; i < scene_.width_ * scene_.height_ / scene_.bucket_size_ /
                              scene_.bucket_size_;
        ++i) {
-    threadPool_.addTask([this, &buffer, debugRenderMode, i]() {
-      renderBucket(scene_, i, scene_.width_ / scene_.bucket_size_, buffer.get(),
+    threadPool_.addTask([this, buffer, debugRenderMode, i]() {
+      renderBucket(scene_, i, scene_.width_ / scene_.bucket_size_, buffer,
                    debugRenderMode, rayMaxDepth_);
     });
   }
@@ -603,18 +603,10 @@ void Renderer::takeSnapshot(const std::string &outFileName,
       buffer[i] = {val / max_distance, val / max_distance, val / max_distance};
     }
   }
-  for (size_t i = 0; i < scene_.width_ * scene_.height_; ++i) {
-    outputFileBuffer += buffer[i].getU8View().toString() + " ";
-  }
   const auto timerEnd = std::chrono::steady_clock::now();
   std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timerEnd -
                                                                      timerStart)
             << '\n';
-  std::ofstream image(outFileName, std::ios::trunc | std::ios::out);
-  if (!image.is_open()) {
-    throw std::runtime_error("Could not open " + outFileName + " for writing!");
-  }
-  image << outputFileBuffer;
 }
 
 void Renderer::overwriteMaxRayDepth(size_t value) noexcept {

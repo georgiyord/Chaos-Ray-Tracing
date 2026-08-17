@@ -4,7 +4,6 @@
 #include "RenderEngine/Scene.hpp"
 #include "RenderEngine/ThreadPool.hpp"
 #include "RenderEngine/utils.hpp"
-#include <string>
 
 namespace RenderEngine {
 class Renderer {
@@ -15,10 +14,11 @@ class Renderer {
 
 public:
   Renderer(const Scene &) noexcept;
-  void takeSnapshot(const std::string &,
+  void takeSnapshot(Color *buffer,
                     RenderMode debugRenderMode = RenderMode::Default) const;
+  Color *createColorBuffer() const;
 
-  void overwriteMaxRayDepth(size_t ) noexcept;
+  void overwriteMaxRayDepth(size_t) noexcept;
 };
 } // namespace RenderEngine
 
