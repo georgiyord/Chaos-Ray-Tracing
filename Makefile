@@ -7,7 +7,7 @@ DEFINITIONS ?=
 WERROR ?= -Werror
 
 CXX      = g++
-CXXFLAGS = -std=c++26 -I./include/ -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wdouble-promotion $(DEFINITIONS)
+CXXFLAGS = -std=c++26 -I./include/ -fPIC -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wdouble-promotion $(DEFINITIONS)
 
 CXXFLAGS_DEBUG   = $(CXXFLAGS) -g -O0 -fsanitize=address,undefined -fno-omit-frame-pointer -DDEBUG
 CXXFLAGS_RELEASE_SYMBOLS = $(CXXFLAGS) -g -O3 -march=native -flto=auto $(WERROR) -DNDEBUG
@@ -31,9 +31,9 @@ debug: ./build/Debug/crt_debug
 release: ./build/Release/crt_release
 releaseWithSymbols: ./build/ReleaseWithSymbols/crt_release
 
-libDebug: build/Debug/libRenderEngine.a
-libRelease: build/Release/libRenderEngine.a
-libReleaseWithSymbols: build/ReleaseWithSymbols/libRenderEngine.a
+libDebug: build/Debug/libRenderEngine.so
+libRelease: build/Release/libRenderEngine.so
+libReleaseWithSymbols: build/ReleaseWithSymbols/libRenderEngine.so
 
 ./build/Debug/crt_debug: $(OBJS_DEBUG) | build/Debug
 	$(CXX) $(CXXFLAGS_DEBUG) $(OBJS_DEBUG) -o $@
@@ -44,14 +44,14 @@ libReleaseWithSymbols: build/ReleaseWithSymbols/libRenderEngine.a
 ./build/ReleaseWithSymbols/crt_release: $(OBJS_RELEASE_SYMBOLS) | build/Release
 	$(CXX) $(CXXFLAGS_RELEASE_SYMBOLS) $(OBJS_RELEASE_SYMBOLS) -o $@
 
-build/Debug/libRenderEngine.a: $(LIB_OBJS_DEBUG) | build/Debug
-	gcc-ar rcs $@ $(LIB_OBJS_DEBUG)
+build/Debug/libRenderEngine.so: $(LIB_OBJS_DEBUG) | build/Debug
+	$(CXX) $(CXXFLAGS_DEBUG) -shared -o $@ $(LIB_OBJS_DEBUG)
 
-build/Release/libRenderEngine.a: $(LIB_OBJS_RELEASE) | build/Release
-	gcc-ar rcs $@ $(LIB_OBJS_RELEASE)
+build/Release/libRenderEngine.so: $(LIB_OBJS_RELEASE) | build/Release
+	$(CXX) $(CXXFLAGS_RELEASE) -shared -o $@ $(LIB_OBJS_RELEASE)
 
-build/ReleaseWithSymbols/libRenderEngine.a: $(LIB_OBJS_RELEASE_SYMBOLS) | build/ReleaseWithSymbols
-	gcc-ar rcs $@ $(LIB_OBJS_RELEASE_SYMBOLS)
+build/ReleaseWithSymbols/libRenderEngine.so: $(LIB_OBJS_RELEASE_SYMBOLS) | build/ReleaseWithSymbols
+	$(CXX) $(CXXFLAGS_RELEASE_SYMBOLS) -shared -o $@ $(LIB_OBJS_RELEASE_SYMBOLS)
 
 build/Debug/%.o: src/%.cpp | build/Debug
 	$(CXX) $(CXXFLAGS_DEBUG) -MMD -MP -c $< -o $@

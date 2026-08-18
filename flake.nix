@@ -18,9 +18,9 @@
 
         installPhase = ''
           mkdir -p $out/include $out/lib $out/debugTool
-          cp build/Debug/libRenderEngine.a $out/lib/libRenderEngine-debug.a
-          cp build/Release/libRenderEngine.a $out/lib/libRenderEngine-release.a
-          cp build/ReleaseWithSymbols/libRenderEngine.a $out/lib/libRenderEngine-releaseWithSymbols.a
+          cp build/Debug/libRenderEngine.so $out/lib/libRenderEngine-debug.so
+          cp build/Release/libRenderEngine.so $out/lib/libRenderEngine-release.so
+          cp build/ReleaseWithSymbols/libRenderEngine.so $out/lib/libRenderEngine-releaseWithSymbols.so
           cp build/Debug/crt_debug $out/debugTool/crt_render
           cp -r include/. $out/include/
         '';
