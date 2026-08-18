@@ -13,15 +13,15 @@
         src = self;
 
         buildPhase = ''
-          make debug libDebug libRelease libReleaseWithSymbols
+          make release libDebug libRelease libReleaseWithSymbols
         '';
 
         installPhase = ''
-          mkdir -p $out/include $out/lib $out/debugTool
+          mkdir -p $out/include $out/lib $out/bin
           cp build/Debug/libRenderEngine.so $out/lib/libRenderEngine-debug.so
           cp build/Release/libRenderEngine.so $out/lib/libRenderEngine-release.so
           cp build/ReleaseWithSymbols/libRenderEngine.so $out/lib/libRenderEngine-releaseWithSymbols.so
-          cp build/Debug/crt_debug $out/debugTool/crt_render
+          cp build/Release/crt_release $out/bin/crt_render
           cp -r include/. $out/include/
         '';
       };
