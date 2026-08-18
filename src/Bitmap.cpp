@@ -71,8 +71,8 @@ Bitmap::~Bitmap() noexcept {
 }
 
 [[nodiscard]] Color Bitmap::getColor(float x, float y) const noexcept {
-  size_t x_ = static_cast<size_t>(x * static_cast<float>(width_));
-  size_t y_ = static_cast<size_t>(y * static_cast<float>(height_));
+  size_t x_ = static_cast<size_t>(x * static_cast<float>(width_)) - 1;
+  size_t y_ = static_cast<size_t>(y * static_cast<float>(height_)) - 1;
   unsigned char *offset = data_ + (x_ + y_ * static_cast<size_t>(width_)) * 3;
   float r = offset[0] / 255.f;
   float g = offset[1] / 255.f;
