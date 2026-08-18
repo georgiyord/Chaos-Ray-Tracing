@@ -8,13 +8,13 @@
 namespace RenderEngine {
 class Matrix3x3 {
   using Matrix = Matrix3x3;
-  std::array<double, 9> data_;
+  std::array<float, 9> data_;
 
 public:
  Matrix3x3() noexcept;
- Matrix3x3(std::array<double, 9> data) noexcept;
+ Matrix3x3(std::array<float, 9> data) noexcept;
 
-  [[nodiscard]] const double &operator[](size_t row, size_t col) const;
+  [[nodiscard]] const float &operator[](size_t row, size_t col) const;
 
   [[nodiscard]] static Matrix3x3 zero() noexcept;
   [[nodiscard]] static Matrix3x3 one() noexcept;

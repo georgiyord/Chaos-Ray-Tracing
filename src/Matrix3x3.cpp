@@ -4,9 +4,9 @@
 
 namespace RenderEngine {
  Matrix3x3::Matrix3x3() noexcept : data_{} {}
- Matrix3x3::Matrix3x3(std::array<double, 9> data) noexcept : data_{data} {}
+ Matrix3x3::Matrix3x3(std::array<float, 9> data) noexcept : data_{data} {}
 
-[[nodiscard]] const double &Matrix3x3::operator[](size_t row, size_t col) const {
+[[nodiscard]] const float &Matrix3x3::operator[](size_t row, size_t col) const {
   if (row >= 3 || col >= 3)
     throw std::out_of_range("Invalid positions");
   return data_[row * 3 + col];
@@ -41,9 +41,9 @@ namespace RenderEngine {
 }
 
  vec3& operator*=(vec3 &vec, const Matrix3x3 &matrix) noexcept {
-  double newX = vec.x_ * matrix[0, 0] + vec.y_ * matrix[1, 0] + vec.z_ * matrix[2, 0];
-  double newY = vec.x_ * matrix[0, 1] + vec.y_ * matrix[1, 1] + vec.z_ * matrix[2, 1];
-  double newZ = vec.x_ * matrix[0, 2] + vec.y_ * matrix[1, 2] + vec.z_ * matrix[2, 2];
+  float newX = vec.x_ * matrix[0, 0] + vec.y_ * matrix[1, 0] + vec.z_ * matrix[2, 0];
+  float newY = vec.x_ * matrix[0, 1] + vec.y_ * matrix[1, 1] + vec.z_ * matrix[2, 1];
+  float newZ = vec.x_ * matrix[0, 2] + vec.y_ * matrix[1, 2] + vec.z_ * matrix[2, 2];
   vec.x_ = newX;
   vec.y_ = newY;
   vec.z_ = newZ;

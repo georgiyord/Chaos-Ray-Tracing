@@ -31,7 +31,7 @@ constexpr Axis updateAxis(Axis axis) {
   return axis;
 }
 
-inline const double &getAxisCoordinate(const vec3 &vec, const Axis &axis) {
+inline const float &getAxisCoordinate(const vec3 &vec, const Axis &axis) {
   switch (axis) {
   case Axis::X:
     return vec.x_;
@@ -45,7 +45,7 @@ inline const double &getAxisCoordinate(const vec3 &vec, const Axis &axis) {
   }
 }
 
-inline double &getAxisCoordinate(vec3 &vec, const Axis &axis) {
+inline float &getAxisCoordinate(vec3 &vec, const Axis &axis) {
   switch (axis) {
   case Axis::X:
     return vec.x_;
@@ -87,22 +87,22 @@ size_t initHelper(std::vector<AccelerationTreeNode> &nodes,
     std::sort(
         triangleIds1.begin(), triangleIds1.end(),
         [splittingAxis, &triangles, &vertices](size_t id1, size_t id2) {
-          const double &pos_triangle1_vertex1 = getAxisCoordinate(
+          const float &pos_triangle1_vertex1 = getAxisCoordinate(
               vertices[triangles[id1].id_vertex1_].position, splittingAxis);
-          const double &pos_triangle1_vertex2 = getAxisCoordinate(
+          const float &pos_triangle1_vertex2 = getAxisCoordinate(
               vertices[triangles[id1].id_vertex2_].position, splittingAxis);
-          const double &pos_triangle1_vertex3 = getAxisCoordinate(
+          const float &pos_triangle1_vertex3 = getAxisCoordinate(
               vertices[triangles[id1].id_vertex3_].position, splittingAxis);
-          const double &pos_triangle2_vertex1 = getAxisCoordinate(
+          const float &pos_triangle2_vertex1 = getAxisCoordinate(
               vertices[triangles[id2].id_vertex1_].position, splittingAxis);
-          const double &pos_triangle2_vertex2 = getAxisCoordinate(
+          const float &pos_triangle2_vertex2 = getAxisCoordinate(
               vertices[triangles[id2].id_vertex2_].position, splittingAxis);
-          const double &pos_triangle2_vertex3 = getAxisCoordinate(
+          const float &pos_triangle2_vertex3 = getAxisCoordinate(
               vertices[triangles[id2].id_vertex3_].position, splittingAxis);
-          const double maxPos1 =
+          const float maxPos1 =
               std::max(pos_triangle1_vertex1,
                        std::max(pos_triangle1_vertex2, pos_triangle1_vertex3));
-          const double maxPos2 =
+          const float maxPos2 =
               std::max(pos_triangle2_vertex1,
                        std::max(pos_triangle2_vertex2, pos_triangle2_vertex3));
           return maxPos1 < maxPos2;
@@ -127,7 +127,7 @@ size_t initHelper(std::vector<AccelerationTreeNode> &nodes,
                 vertices[triangles[triangleIds1.back()].id_vertex3_].position,
                 splittingAxis)));
     for (const auto id : triangleIds2) {
-      double &boundry = getAxisCoordinate(box2.min, splittingAxis);
+      float &boundry = getAxisCoordinate(box2.min, splittingAxis);
       boundry = std::min(
           boundry,
           std::min(

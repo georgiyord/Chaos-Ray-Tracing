@@ -1,10 +1,10 @@
 
 namespace RenderEngine {
 struct vec2 {
-  double x_;
-  double y_;
+  float x_;
+  float y_;
   
- vec2(double x, double y) noexcept;
+ vec2(float x, float y) noexcept;
  vec2() noexcept;
 
   [[nodiscard]] static vec2 zero() noexcept;
@@ -17,18 +17,18 @@ struct vec2 {
  vec2 &operator-=(const vec2 &rhs) noexcept;
  vec2 &operator+=(const vec2 &rhs) noexcept;
 
-  [[nodiscard]] vec2 operator/(double rhs) const noexcept;
+  [[nodiscard]] vec2 operator/(float rhs) const noexcept;
 
- vec2 &operator*=(double rhs) noexcept;
- vec2 &operator/=(double rhs) noexcept;
+ vec2 &operator*=(float rhs) noexcept;
+ vec2 &operator/=(float rhs) noexcept;
 
-  [[nodiscard]] double lengthSquared() const noexcept;
-  [[nodiscard]] double length() const noexcept;
+  [[nodiscard]] float lengthSquared() const noexcept;
+  [[nodiscard]] float length() const noexcept;
 
   [[nodiscard]] vec2 &normalise();
 
- void update(double x, double y) noexcept;
+ void update(float x, float y) noexcept;
 };
-[[nodiscard]] vec2 operator*(double scalar, const vec2 &vec) noexcept;
-[[nodiscard]] vec2 operator*(const vec2 &vec, double scalar) noexcept;
+[[nodiscard]] vec2 operator*(float scalar, const vec2 &vec) noexcept;
+[[nodiscard]] vec2 operator*(const vec2 &vec, float scalar) noexcept;
 } // namespace RenderEngine

@@ -4,6 +4,7 @@
 #include <cstring>
 #include <stdexcept>
 
+// TODO: instead of using compiler flags, disable by passing include path via -isystem instead of -I
 // Disable all warnings for vendored stb/image.hpp
 #if defined(_MSC_VER)
 #pragma warning(push, 0)
@@ -69,13 +70,13 @@ Bitmap::~Bitmap() noexcept {
   }
 }
 
-[[nodiscard]] Color Bitmap::getColor(double x, double y) const noexcept {
-  size_t x_ = static_cast<size_t>(x * static_cast<double>(width_));
-  size_t y_ = static_cast<size_t>(y * static_cast<double>(height_));
+[[nodiscard]] Color Bitmap::getColor(float x, float y) const noexcept {
+  size_t x_ = static_cast<size_t>(x * static_cast<float>(width_));
+  size_t y_ = static_cast<size_t>(y * static_cast<float>(height_));
   unsigned char *offset = data_ + (x_ + y_ * static_cast<size_t>(width_)) * 3;
-  double r = offset[0] / 255.;
-  double g = offset[1] / 255.;
-  double b = offset[2] / 255.;
+  float r = offset[0] / 255.f;
+  float g = offset[1] / 255.f;
+  float b = offset[2] / 255.f;
   return {r, g, b};
 }
 } // namespace RenderEngine

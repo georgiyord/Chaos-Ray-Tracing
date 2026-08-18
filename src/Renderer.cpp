@@ -24,7 +24,7 @@
 namespace RenderEngine {
 
 struct IntersectResult {
-  double steps = doubleInf;
+  float steps = floatInf;
   vec3 hitPoint;
   size_t id_triangle;
   size_t id_material;
@@ -51,14 +51,14 @@ Renderer::Renderer(const Scene &scene) noexcept
   const auto rayStep = dotProduct(ray.direction_, normal);
   IntersectResult intersectResult;
   if (rayStep == 0) {
-    intersectResult.steps = doubleNaN;
+    intersectResult.steps = floatNaN;
     return intersectResult;
   }
   const auto planeDistance = dotProduct(point1 - ray.origin_, normal);
-  double tSteps = planeDistance / rayStep;
+  float tSteps = planeDistance / rayStep;
 
   if (tSteps < 0) {
-    intersectResult.steps = doubleNaN;
+    intersectResult.steps = floatNaN;
     return intersectResult;
   }
   vec3 pointPlaneIntersection = ray.origin_ + tSteps * ray.direction_;
@@ -66,19 +66,19 @@ Renderer::Renderer(const Scene &scene) noexcept
   if (dotProduct(normal, crossProduct(point2 - point1,
                                       pointPlaneIntersection - point1)) <
       -RENDERENGINE_HITPOINT_BIAS) {
-    intersectResult.steps = doubleNaN;
+    intersectResult.steps = floatNaN;
     return intersectResult;
   }
   if (dotProduct(normal, crossProduct(point3 - point2,
                                       pointPlaneIntersection - point2)) <
       -RENDERENGINE_HITPOINT_BIAS) {
-    intersectResult.steps = doubleNaN;
+    intersectResult.steps = floatNaN;
     return intersectResult;
   }
   if (dotProduct(normal, crossProduct(point1 - point3,
                                       pointPlaneIntersection - point3)) <
       -RENDERENGINE_HITPOINT_BIAS) {
-    intersectResult.steps = doubleNaN;
+    intersectResult.steps = floatNaN;
     return intersectResult;
   }
   intersectResult.steps = tSteps;
@@ -92,7 +92,7 @@ Renderer::Renderer(const Scene &scene) noexcept
 
 [[nodiscard]] bool intersectsFast(const Scene &scene, const Ray &ray,
                                   const size_t id_triangle,
-                                  const double distance) noexcept {
+                                  const float distance) noexcept {
   const auto [id_vertex1, id_vertex2, id_vertex3, id_mesh] =
       scene.triangles_[id_triangle];
   const vec3 &point1 = scene.vertices_[id_vertex1].position;
@@ -103,7 +103,7 @@ Renderer::Renderer(const Scene &scene) noexcept
   if (rayStep == 0)
     return false;
   const auto planeDistance = dotProduct(point1 - ray.origin_, normal);
-  double tSteps = planeDistance / rayStep;
+  float tSteps = planeDistance / rayStep;
 
   if (tSteps < 0)
     return false;
@@ -176,17 +176,17 @@ interpolateNormal(const Scene &scene,
                            vertex2.normal, vertex3.normal);
 }
 
-[[nodiscard]] double traceShadowRay(const Scene &scene, const vec3 &rayOrigin,
+[[nodiscard]] float traceShadowRay(const Scene &scene, const vec3 &rayOrigin,
                                     const vec3 &surfaceNormal) {
-  double finalLightReached = 0;
+  float finalLightReached = 0;
   for (const auto &light : scene.lights_) {
     vec3 pointToLightSourceVec = light.position_ - rayOrigin;
     Ray ray{rayOrigin, pointToLightSourceVec};
     const auto cosineLawFactor =
-        std::max(0., dotProduct(ray.direction_, surfaceNormal));
+        std::max(0.f, dotProduct(ray.direction_, surfaceNormal));
     auto tmpLight =
         light.intensity_ /
-        (4 * std::numbers::pi * pointToLightSourceVec.lengthSquared()) *
+        (4 * std::numbers::pi_v<float> * pointToLightSourceVec.lengthSquared()) *
         cosineLawFactor;
     bool shadowRayIntersection = false;
     IntersectResult intersectResult;
@@ -255,7 +255,7 @@ interpolateNormal(const Scene &scene,
                                   vertex2.position, vertex3.position);
     const vec3 interpolatedUV =
         u * vertex2.uv + v * vertex3.uv + (1 - u - v) * vertex1.uv;
-    const double reciprocate = 1 / checkerTexture.square_size;
+    const float reciprocate = 1 / checkerTexture.square_size;
     size_t uSampled = static_cast<size_t>(interpolatedUV.x_ * reciprocate);
     size_t vSampled = static_cast<size_t>(interpolatedUV.y_ * reciprocate);
     if ((uSampled % 2 == 0 && vSampled % 2 == 0) ||
@@ -286,15 +286,15 @@ interpolateNormal(const Scene &scene,
 [[nodiscard]] Color
 goochShade(const Scene &scene,
            const IntersectResult &intersectResult) noexcept {
-  const Color cold = {0, 0, .55};
-  const Color warm = {.3, .3, 0};
-  const double warmFactor = .6;
-  const double coldFactor = .2;
+  const Color cold = {0, 0, .55f};
+  const Color warm = {.3f, .3f, 0};
+  const float warmFactor = .6f;
+  const float coldFactor = .2f;
   const Color coldTint = Color::elementWiseAddition(
       cold, coldFactor * getTextureColor(scene, intersectResult));
   const Color warmTint = Color::elementWiseAddition(
       warm, warmFactor * getTextureColor(scene, intersectResult));
-  double lightFactor = 0;
+  float lightFactor = 0;
   vec3 finalNormal;
   if (scene.materials_[intersectResult.id_material].smoothShading) {
     finalNormal = interpolateNormal(scene, intersectResult);
@@ -303,13 +303,13 @@ goochShade(const Scene &scene,
   }
   for (const auto &light : scene.lights_) {
     lightFactor +=
-        (1. +
+        (1.f +
          dotProduct(finalNormal,
                     (light.position_ - intersectResult.hitPoint).normalise())) /
-        2.;
+        2.f;
   }
-  lightFactor /= static_cast<double>(scene.lights_.size());
-  lightFactor = std::clamp(lightFactor, 0., 1.);
+  lightFactor /= static_cast<float>(scene.lights_.size());
+  lightFactor = std::clamp(lightFactor, 0.f, 1.f);
   Color c = Color::elementWiseAddition(lightFactor * warmTint,
                                        (1 - lightFactor) * coldTint);
   return c;
@@ -330,7 +330,7 @@ goochShade(const Scene &scene,
     if (newIntersectResult.steps < intersectResult.steps)
       intersectResult = newIntersectResult;
   }
-  if (intersectResult.steps == std::numeric_limits<double>::infinity()) {
+  if (intersectResult.steps == std::numeric_limits<float>::infinity()) {
     return scene.backgroundColor_;
   }
   switch (debugRenderMode) {
@@ -342,8 +342,8 @@ goochShade(const Scene &scene,
       } else {
         finalNormal = scene.triangleNormals_[intersectResult.id_triangle];
       }
-      return Color{(finalNormal.x_ + 1.) / 2, (finalNormal.y_ + 1.) / 2,
-                   (finalNormal.z_ + 1.) / 2};
+      return Color{(finalNormal.x_ + 1.f) / 2, (finalNormal.y_ + 1.f) / 2,
+                   (finalNormal.z_ + 1.f) / 2};
     }();
   case RenderMode::DistanceShade:
     return {intersectResult.steps, 0, 0};
@@ -382,11 +382,14 @@ goochShade(const Scene &scene,
     } else {
       finalNormal = scene.triangleNormals_[intersectResult.id_triangle];
     }
-    double tmp = dotProduct(ray.direction_, finalNormal);
-    if (tmp > 0.)
+    float tmp = dotProduct(ray.direction_, finalNormal);
+    if (tmp > 0.f)
       tmp = -tmp;
 
-    double fresnelFactor = .5 * std::pow(1. + tmp, 5);
+    // gcc's std::pow implementation promotes from arguments float, int to double, double
+    // instead of casting, i trust the compiler will see that 5.f is actually an integer and will not use instructions for float * float
+    // at least if my assumption that there are instructions for float * int is correct ¯\_(ツ)_/¯
+    float fresnelFactor = .5f * std::pow(1.f + tmp, 5.f);
 
     return Color::elementWiseAddition(fresnelFactor * reflectionColor,
                                       (1 - fresnelFactor) * refractionColor);
@@ -429,7 +432,7 @@ handleReflectiveMaterial(const Scene &scene,
   } else {
     finalNormal = scene.triangleNormals_[id_triangle];
   }
-  bool frontSide = dotProduct(previousRay.direction_, finalNormal) < .0;
+  bool frontSide = dotProduct(previousRay.direction_, finalNormal) < .0f;
   vec3 offsetHitPoint;
   if (frontSide) {
     offsetHitPoint = hitPoint + RENDERENGINE_HITPOINT_BIAS * finalNormal;
@@ -475,14 +478,14 @@ handleRefractiveMaterial(const Scene &scene,
                         reflectionDirection, previousRay.depthChances_ - 1};
 
     auto ior = scene.materials_[id_material].ior;
-    double cosI = -dotProduct(finalNormal, previousRay.direction_);
-    double sinI = std::sqrt(1 - cosI * cosI);
-    double sinR = sinI / ior;
-    double cosR = std::sqrt(1 - sinR * sinR);
+    float cosI = -dotProduct(finalNormal, previousRay.direction_);
+    float sinI = std::sqrt(1 - cosI * cosI);
+    float sinR = sinI / ior;
+    float cosR = std::sqrt(1 - sinR * sinR);
     vec3 A = (-1) * finalNormal * cosR;
     vec3 B = previousRay.direction_ + finalNormal * cosI;
     vec3 refractionDirection = A + B.normalise() * sinR;
-    assert(refractionDirection.x_ != doubleNaN);
+    assert(refractionDirection.x_ != floatNaN);
 
     Ray refractedRay{hitPoint - RENDERENGINE_HITPOINT_BIAS * finalNormal,
                      refractionDirection, previousRay.depthChances_ - 1};
@@ -490,8 +493,8 @@ handleRefractiveMaterial(const Scene &scene,
     Color reflectionColor = traceRay(scene, reflectedRay, RenderMode::Default);
     Color refractionColor = traceRay(scene, refractedRay, RenderMode::Default);
 
-    double fresnelFactor =
-        .5 * std::pow(1. + dotProduct(previousRay.direction_, finalNormal), 10);
+    float fresnelFactor =
+        .5f * std::pow(1.f + dotProduct(previousRay.direction_, finalNormal), 10.f);
 
     return Color::elementWiseAddition(fresnelFactor * reflectionColor,
                                       (1 - fresnelFactor) * refractionColor);
@@ -506,14 +509,14 @@ handleRefractiveMaterial(const Scene &scene,
     Color reflectionColor = traceRay(scene, reflectedRay, RenderMode::Default);
 
     auto ior = scene.materials_[id_material].ior;
-    double cosI = dotProduct(finalNormal, previousRay.direction_);
-    double sinI = std::sqrt(1 - cosI * cosI);
-    double sinR = sinI * ior;
-    double cosR = std::sqrt(1 - sinR * sinR);
+    float cosI = dotProduct(finalNormal, previousRay.direction_);
+    float sinI = std::sqrt(1 - cosI * cosI);
+    float sinR = sinI * ior;
+    float cosR = std::sqrt(1 - sinR * sinR);
     vec3 A = finalNormal * cosR;
     vec3 B = previousRay.direction_ - finalNormal * cosI;
     vec3 refractionDirection = A + B.normalise() * sinR;
-    assert(refractionDirection.x_ != doubleNaN);
+    assert(refractionDirection.x_ != floatNaN);
     if (sinI >= 1 / ior) {
       return reflectionColor;
     }
@@ -523,8 +526,8 @@ handleRefractiveMaterial(const Scene &scene,
 
     Color refractionColor = traceRay(scene, refractedRay, RenderMode::Default);
 
-    double fresnelFactor =
-        .5 * std::pow(1. - dotProduct(previousRay.direction_, finalNormal), 5);
+    float fresnelFactor =
+        .5f * std::pow(1.f - dotProduct(previousRay.direction_, finalNormal), 5.f);
 
     return Color::elementWiseAddition(fresnelFactor * reflectionColor,
                                       (1 - fresnelFactor) * refractionColor);
@@ -534,14 +537,14 @@ handleRefractiveMaterial(const Scene &scene,
 void renderBucket(const Scene &scene, const size_t bucket,
                   const size_t bucketCols, Color *const buffer,
                   RenderMode debugRenderMode, size_t rayMaxDepth) noexcept {
-  const double resolutionWidth = static_cast<double>(scene.width_);
-  const double resolutionHeight = static_cast<double>(scene.height_);
+  const float resolutionWidth = static_cast<float>(scene.width_);
+  const float resolutionHeight = static_cast<float>(scene.height_);
   size_t bucketOffsetX = (bucket % bucketCols) * scene.bucket_size_;
   size_t bucketOffsetY = (bucket / bucketCols) * scene.bucket_size_;
   for (size_t y = 0; y < scene.bucket_size_; ++y) {
     for (size_t x = 0; x < scene.bucket_size_; ++x) {
-      double worldX = static_cast<double>(bucketOffsetX + x) + .5;
-      double worldY = static_cast<double>(bucketOffsetY + y) + .5;
+      float worldX = static_cast<float>(bucketOffsetX + x) + .5f;
+      float worldY = static_cast<float>(bucketOffsetY + y) + .5f;
 
       worldX /= resolutionWidth;
       worldY /= resolutionHeight;
@@ -550,7 +553,7 @@ void renderBucket(const Scene &scene, const size_t bucket,
       worldY = 1 - worldY * 2;
 
       worldX *= (resolutionWidth / resolutionHeight);
-      vec3 direction{worldX, worldY, -1.0};
+      vec3 direction{worldX, worldY, -1.0f};
       direction = direction * scene.camera_.orientation();
       Ray ray{scene.camera_.position(), direction, rayMaxDepth};
       buffer[(bucketOffsetX + x) + (bucketOffsetY + y) * scene.width_] =
@@ -586,7 +589,7 @@ std::chrono::milliseconds Renderer::takeSnapshot(Color* const buffer, RenderMode
   }
   threadPool_.startAndWait();
 
-  double max_distance = 0.;
+  float max_distance = 0.f;
   // this is a stupid way of doing this
   // TODO: change traceRay to return information about distance and hitpoint
   // besides color

@@ -44,12 +44,12 @@ Texture Texture::createAlbedoTexture(const Color &albedo) noexcept {
 }
 Texture Texture::createEdgesTexture(const Color &inner_color,
                                     const Color &edge_color,
-                                    const double edge_width) noexcept {
+                                    const float edge_width) noexcept {
   return {TextureType::EDGES, inner_color, edge_color, edge_width, {}};
 }
 Texture Texture::createCheckerTexture(const Color &color_A,
                                       const Color &color_B,
-                                      const double square_size) noexcept {
+                                      const float square_size) noexcept {
   return {TextureType::CHECKER, color_A, color_B, square_size, {}};
 }
 Texture Texture::createBitmapTexture(const size_t id_bitmap) {

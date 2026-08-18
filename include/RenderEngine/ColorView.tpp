@@ -15,7 +15,7 @@ namespace RenderEngine {
   class ColorView {
     const Color &color_;
 
-    [[nodiscard]] T parseChannel(double channel) const noexcept {
+    [[nodiscard]] T parseChannel(float channel) const noexcept {
       return static_cast<T>(std::round(Color::clampChannel(channel) *
                                        std::numeric_limits<T>::max()));
     }

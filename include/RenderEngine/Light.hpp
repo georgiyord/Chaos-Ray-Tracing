@@ -5,10 +5,10 @@
 
 namespace RenderEngine {
 struct Light {
-  double intensity_;
+  float intensity_;
   vec3 position_;
 
-  Light(double intensity = 10, const vec3 &position = vec3::zero()) noexcept;
+  Light(float intensity = 10, const vec3 &position = vec3::zero()) noexcept;
 };
 } // namespace RenderEngine
 

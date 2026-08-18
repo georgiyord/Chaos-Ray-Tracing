@@ -19,7 +19,7 @@ struct ProgramSettings {
   size_t renderHeight = 0;
   std::string sceneFilePath;
   RenderMode renderMode = RenderMode::Default;
-  Color backgroundColor = {doubleNaN, doubleNaN, doubleNaN};
+  Color backgroundColor = {floatNaN, floatNaN, floatNaN};
 };
 
 inline void printUsage(const char *binaryName,
@@ -76,8 +76,8 @@ inline size_t parseInteger(std::string_view argument) {
   return out;
 }
 
-inline double parseFloating(std::string_view argument) {
-  double out;
+inline float parseFloating(std::string_view argument) {
+  float out;
   const auto parseRes = std::from_chars(argument.begin(), argument.end(), out);
   if (parseRes.ec == std::errc::result_out_of_range) {
     printInvalidArgumentMessageAndExit(
@@ -85,7 +85,7 @@ inline double parseFloating(std::string_view argument) {
   }
   if (parseRes.ec == std::errc::invalid_argument ||
       parseRes.ptr != argument.end()) {
-    printInvalidArgumentMessageAndExit("Option parameter is not a double: '" +
+    printInvalidArgumentMessageAndExit("Option parameter is not a float: '" +
                                        std::string{argument} + "'");
   }
   return out;

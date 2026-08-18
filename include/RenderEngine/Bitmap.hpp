@@ -20,7 +20,7 @@ public:
     Bitmap& operator=(const Bitmap&) = delete;
     ~Bitmap() noexcept;
 
-    [[nodiscard]] Color getColor(double x, double y) const noexcept;
+    [[nodiscard]] Color getColor(float x, float y) const noexcept;
 };
 }
 

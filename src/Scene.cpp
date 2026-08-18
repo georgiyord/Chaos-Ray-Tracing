@@ -57,22 +57,22 @@ Scene::Scene(size_t width, size_t height, size_t bucket_size,
 
   char fileBuffer[65536];
   const auto arrToColorObject = [](const rapidjson::Value &arr) {
-    return Color{arr[0].GetDouble(), arr[1].GetDouble(), arr[2].GetDouble()};
+    return Color{arr[0].GetFloat(), arr[1].GetFloat(), arr[2].GetFloat()};
   };
   const auto arrToVec3 = [](const rapidjson::Value &arr) {
-    return vec3{arr[0].GetDouble(), arr[1].GetDouble(), arr[2].GetDouble()};
+    return vec3{arr[0].GetFloat(), arr[1].GetFloat(), arr[2].GetFloat()};
   };
   const auto arrToMatrix3x3 = [](const rapidjson::Value &arr) {
     return Matrix3x3{{
-        arr[0].GetDouble(),
-        arr[1].GetDouble(),
-        arr[2].GetDouble(),
-        arr[3].GetDouble(),
-        arr[4].GetDouble(),
-        arr[5].GetDouble(),
-        arr[6].GetDouble(),
-        arr[7].GetDouble(),
-        arr[8].GetDouble(),
+        arr[0].GetFloat(),
+        arr[1].GetFloat(),
+        arr[2].GetFloat(),
+        arr[3].GetFloat(),
+        arr[4].GetFloat(),
+        arr[5].GetFloat(),
+        arr[6].GetFloat(),
+        arr[7].GetFloat(),
+        arr[8].GetFloat(),
     }};
   };
 
@@ -142,28 +142,28 @@ Scene::Scene(size_t width, size_t height, size_t bucket_size,
       textures.emplace_back(
           TextureType::ALBEDO,
           arrToColorObject(textureObject["albedo"].GetArray()), Color{},
-          double{}, -1);
+          float{}, -1);
       break;
     case TextureType::EDGES:
       textures.emplace_back(
           TextureType::EDGES,
           arrToColorObject(textureObject["inner_color"].GetArray()),
           arrToColorObject(textureObject["edge_color"].GetArray()),
-          textureObject["edge_width"].GetDouble(), -1);
+          textureObject["edge_width"].GetFloat(), -1);
       break;
     case TextureType::CHECKER:
       textures.emplace_back(
           TextureType::CHECKER,
           arrToColorObject(textureObject["color_A"].GetArray()),
           arrToColorObject(textureObject["color_B"].GetArray()),
-          textureObject["square_size"].GetDouble(), -1);
+          textureObject["square_size"].GetFloat(), -1);
       break;
     case TextureType::BITMAP:
       bitmaps.emplace_back(
           sceneDir.string() +
           std::string_view{textureObject["file_path"].GetString(),
                            textureObject["file_path"].GetStringLength()});
-      textures.emplace_back(TextureType::BITMAP, Color{}, Color{}, double{},
+      textures.emplace_back(TextureType::BITMAP, Color{}, Color{}, float{},
                             bitmaps.size() - 1);
       break;
     default:
@@ -180,14 +180,14 @@ Scene::Scene(size_t width, size_t height, size_t bucket_size,
                              texturesIdsTable.at(std::string_view{
                                  material["albedo"].GetString(),
                                  material["albedo"].GetStringLength()}),
-                             material["smooth_shading"].GetBool(), double{});
+                             material["smooth_shading"].GetBool(), float{});
       break;
     case MaterialType::REFLECTIVE:
       materials.emplace_back(MaterialType::REFLECTIVE,
                              texturesIdsTable.at(std::string_view{
                                  material["albedo"].GetString(),
                                  material["albedo"].GetStringLength()}),
-                             material["smooth_shading"].GetBool(), double{});
+                             material["smooth_shading"].GetBool(), float{});
       break;
     case MaterialType::REFRACTIVE:
       materials.emplace_back(MaterialType::REFRACTIVE,
@@ -195,14 +195,14 @@ Scene::Scene(size_t width, size_t height, size_t bucket_size,
                                  material["albedo"].GetString(),
                                  material["albedo"].GetStringLength()}),
                              material["smooth_shading"].GetBool(),
-                             material["ior"].GetDouble());
+                             material["ior"].GetFloat());
       break;
     case MaterialType::CONSTANT:
       materials.emplace_back(MaterialType::CONSTANT,
                              texturesIdsTable.at(std::string_view{
                                  material["albedo"].GetString(),
                                  material["albedo"].GetStringLength()}),
-                             material["smooth_shading"].GetBool(), double{});
+                             material["smooth_shading"].GetBool(), float{});
       break;
     default:
       std::unreachable();
@@ -227,15 +227,15 @@ Scene::Scene(size_t width, size_t height, size_t bucket_size,
     size_t verticesOffset = vertices.size();
     for (auto vertexCoordinateItr = verticesMember.Begin();
          vertexCoordinateItr != verticesMember.End();) {
-      const double x = vertexCoordinateItr++->GetDouble();
-      const double y = vertexCoordinateItr++->GetDouble();
-      const double z = vertexCoordinateItr++->GetDouble();
+      const float x = vertexCoordinateItr++->GetFloat();
+      const float y = vertexCoordinateItr++->GetFloat();
+      const float z = vertexCoordinateItr++->GetFloat();
       vertices.emplace_back(vec3{x, y, z}, vec3::zero(), vec3::zero());
     }
     for (rapidjson::SizeType i = 0; i < uvsMember.Size();) {
-      const double x = uvsMember[i++].GetDouble();
-      const double y = uvsMember[i++].GetDouble();
-      const double z = uvsMember[i++].GetDouble();
+      const float x = uvsMember[i++].GetFloat();
+      const float y = uvsMember[i++].GetFloat();
+      const float z = uvsMember[i++].GetFloat();
       vertices[verticesOffset + i / 3 - 1].uv = {x, y, z};
     }
     size_t trianglesOffset = triangles.size();
@@ -266,16 +266,16 @@ Scene::Scene(size_t width, size_t height, size_t bucket_size,
   if (document.HasMember("lights")) {
     for (const auto &light : document["lights"].GetArray()) {
       const auto positionMember = light["position"].GetArray();
-      const auto intensityMember = light["intensity"].GetDouble();
-      lights.emplace_back(intensityMember, vec3{positionMember[0].GetDouble(),
-                                                positionMember[1].GetDouble(),
-                                                positionMember[2].GetDouble()});
+      const auto intensityMember = light["intensity"].GetFloat();
+      lights.emplace_back(intensityMember, vec3{positionMember[0].GetFloat(),
+                                                positionMember[1].GetFloat(),
+                                                positionMember[2].GetFloat()});
     }
   }
 
-  double minX, minY, minZ, maxX, maxY, maxZ;
-  minX = minY = minZ = doubleInf;
-  maxX = maxY = maxZ = -doubleInf;
+  float minX, minY, minZ, maxX, maxY, maxZ;
+  minX = minY = minZ = floatInf;
+  maxX = maxY = maxZ = -floatInf;
   for (const Vertex &vertex : vertices) {
     minX = std::min(minX, vertex.position.x_);
     minY = std::min(minY, vertex.position.y_);

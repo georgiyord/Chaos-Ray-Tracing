@@ -10,35 +10,35 @@ template <typename T>
 class ColorView;
 
 class Color {
-  double r, g, b;
+  float r, g, b;
 
 public:
- Color(double red = 0., double green = 0., double blue = 0.);
- Color(double grayValue);
+ Color(float red = 0.f, float green = 0.f, float blue = 0.f);
+ Color(float grayValue);
 
   [[nodiscard]] ColorView<u8> getU8View() const noexcept;
   [[nodiscard]] ColorView<u16> getU16View() const noexcept;
 
- Color &operator*=(double val);
+ Color &operator*=(float val);
 
-  [[nodiscard]] double red() const noexcept;
-  [[nodiscard]] double green() const noexcept;
-  [[nodiscard]] double blue() const noexcept;
+  [[nodiscard]] float red() const noexcept;
+  [[nodiscard]] float green() const noexcept;
+  [[nodiscard]] float blue() const noexcept;
 
-  [[nodiscard]] double &red() noexcept;
-  [[nodiscard]] double &green() noexcept;
-  [[nodiscard]] double &blue() noexcept;
+  [[nodiscard]] float &red() noexcept;
+  [[nodiscard]] float &green() noexcept;
+  [[nodiscard]] float &blue() noexcept;
 
   [[nodiscard]] static Color
   elementWiseMultiplication(const Color &lhs, const Color &rhs);
   [[nodiscard]] static Color elementWiseAddition(const Color &lhs,
                                                            const Color &rhs);
 
-  [[nodiscard]] static double clampChannel(double channel) noexcept;
+  [[nodiscard]] static float clampChannel(float channel) noexcept;
 };
 
-[[nodiscard]] Color operator*(const Color &c, double val);
-[[nodiscard]] Color operator*(double val, const Color &c);
+[[nodiscard]] Color operator*(const Color &c, float val);
+[[nodiscard]] Color operator*(float val, const Color &c);
 
 namespace Colors {
 extern Color Black;

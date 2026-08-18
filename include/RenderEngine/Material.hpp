@@ -12,7 +12,7 @@ struct Material {
   MaterialType materialType = MaterialType::CONSTANT;
   size_t textureId;
   bool smoothShading = false;
-  double ior = 1;
+  float ior = 1;
 };
 } // namespace RenderEngine
 

@@ -3,7 +3,7 @@
 namespace RenderEngine {
 
 bool AABB::intersects(const Ray &ray) const noexcept {
-  double t;
+  float t;
   t = (min.z_ - ray.origin_.z_) / ray.direction_.z_;
   if (t >= 0) {
     const vec3 point = ray.origin_ + ray.direction_ * t;

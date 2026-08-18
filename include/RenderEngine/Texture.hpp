@@ -14,13 +14,13 @@ struct AlbedoTextureView {
 struct EdgesTextureView {
   Color &edge_color;
   Color &inner_color;
-  double &edge_width;
+  float &edge_width;
 };
 
 struct CheckerTextureView {
   Color &color_A;
   Color &color_B;
-  double &square_size;
+  float &square_size;
 };
 
 struct BitmapTextureView {
@@ -39,7 +39,7 @@ struct Texture {
   TextureType type;
   Color color1;
   Color color2;
-  double extra;
+  float extra;
   size_t id_bitmap;
 
   AlbedoTextureView asAlbedoTexture() noexcept;
@@ -54,9 +54,9 @@ struct Texture {
 
   static Texture createAlbedoTexture(const Color &) noexcept;
   static Texture createEdgesTexture(const Color &, const Color &,
-                                    const double) noexcept;
+                                    const float) noexcept;
   static Texture createCheckerTexture(const Color &, const Color &,
-                                      const double) noexcept;
+                                      const float) noexcept;
   static Texture createBitmapTexture(const size_t);
 };
 

@@ -20,13 +20,13 @@ public:
  void updatePosition(const vec3 &value) noexcept;
  void updateOrientation(const Matrix3x3 &value) noexcept;
 
- void truck(double value) noexcept;
- void pedestal(double value) noexcept;
- void dolly(double value) noexcept;
+ void truck(float value) noexcept;
+ void pedestal(float value) noexcept;
+ void dolly(float value) noexcept;
 
- void tilt(double degrees) noexcept;
- void pan(double degrees) noexcept;
- void roll(double degrees) noexcept;
+ void tilt(float degrees) noexcept;
+ void pan(float degrees) noexcept;
+ void roll(float degrees) noexcept;
 };
 } // namespace RenderEngine
 

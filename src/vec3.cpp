@@ -3,22 +3,22 @@
 #include <stdexcept>
 
 namespace RenderEngine {
- vec3::vec3(double x, double y, double z) noexcept
+ vec3::vec3(float x, float y, float z) noexcept
     : x_(x), y_(y), z_(z) {}
- vec3::vec3() noexcept : x_(0.), y_(0.), z_(0.) {}
+ vec3::vec3() noexcept : x_(0.f), y_(0.f), z_(0.f) {}
 
-[[nodiscard]] vec3 vec3::zero() noexcept { return vec3(0., 0., 0.); }
-[[nodiscard]] vec3 vec3::POS_X() noexcept { return vec3{1., 0., 0.}; }
-[[nodiscard]] vec3 vec3::POS_Y() noexcept { return vec3{0., 1., 0.}; }
-[[nodiscard]] vec3 vec3::POS_Z() noexcept { return vec3{0., 0., 1.}; }
+[[nodiscard]] vec3 vec3::zero() noexcept { return vec3(0.f, 0.f, 0.f); }
+[[nodiscard]] vec3 vec3::POS_X() noexcept { return vec3{1.f, 0.f, 0.f}; }
+[[nodiscard]] vec3 vec3::POS_Y() noexcept { return vec3{0.f, 1.f, 0.f}; }
+[[nodiscard]] vec3 vec3::POS_Z() noexcept { return vec3{0.f, 0.f, 1.f}; }
 [[nodiscard]] vec3 vec3::NEG_X() noexcept {
-  return vec3{-1., 0., 0.};
+  return vec3{-1.f, 0.f, 0.f};
 }
 [[nodiscard]] vec3 vec3::NEG_Y() noexcept {
-  return vec3{0., -1., 0.};
+  return vec3{0.f, -1.f, 0.f};
 }
 [[nodiscard]] vec3 vec3::NEG_Z() noexcept {
-  return vec3{0., 0., -1.};
+  return vec3{0.f, 0.f, -1.f};
 }
 
 [[nodiscard]] bool vec3::operator==(const vec3 &rhs) const noexcept {
@@ -51,54 +51,54 @@ namespace RenderEngine {
   return *this;
 }
 
-[[nodiscard]] vec3 operator*(double scalar, const vec3 &vec) noexcept {
+[[nodiscard]] vec3 operator*(float scalar, const vec3 &vec) noexcept {
   return vec3(vec.x_ * scalar, vec.y_ * scalar, vec.z_ * scalar);
 }
 
-[[nodiscard]] vec3 operator*(const vec3 &vec, double scalar) noexcept {
+[[nodiscard]] vec3 operator*(const vec3 &vec, float scalar) noexcept {
   return vec3(vec.x_ * scalar, vec.y_ * scalar, vec.z_ * scalar);
 }
 
-[[nodiscard]] vec3 vec3::operator/(double rhs) const noexcept {
+[[nodiscard]] vec3 vec3::operator/(float rhs) const noexcept {
   return vec3(x_ / rhs, y_ / rhs, z_ / rhs);
 }
 
- vec3 &vec3::operator*=(double rhs) noexcept {
+ vec3 &vec3::operator*=(float rhs) noexcept {
   x_ *= rhs;
   y_ *= rhs;
   z_ *= rhs;
   return *this;
 }
 
- vec3 &vec3::operator/=(double rhs) noexcept {
+ vec3 &vec3::operator/=(float rhs) noexcept {
   x_ /= rhs;
   y_ /= rhs;
   z_ /= rhs;
   return *this;
 }
 
-[[nodiscard]] double vec3::lengthSquared() const noexcept {
+[[nodiscard]] float vec3::lengthSquared() const noexcept {
   return x_ * x_ + y_ * y_ + z_ * z_;
 }
 
-[[nodiscard]] double vec3::length() const noexcept {
+[[nodiscard]] float vec3::length() const noexcept {
   return std::sqrt(lengthSquared());
 }
 
  vec3 &vec3::normalise() {
-  double _length = lengthSquared();
+  float _length = lengthSquared();
   if (_length == 0)
     throw std::runtime_error("Cannot normalise a zero vector!");
   if (_length == 1)
     return *this;
-  _length = sqrt(_length);
+  _length = std::sqrt(_length);
   x_ /= _length;
   y_ /= _length;
   z_ /= _length;
   return *this;
 }
 
- void vec3::update(double x, double y, double z) noexcept {
+ void vec3::update(float x, float y, float z) noexcept {
   x_ = x;
   y_ = y;
   z_ = z;
@@ -115,7 +115,7 @@ namespace RenderEngine {
   return vec3(a.y_ * b.z_ - a.z_ * b.y_, a.z_ * b.x_ - a.x_ * b.z_,
               a.x_ * b.y_ - a.y_ * b.x_);
 }
-[[nodiscard]] double dotProduct(const vec3 &a,
+[[nodiscard]] float dotProduct(const vec3 &a,
                                           const vec3 &b) noexcept {
   return a.x_ * b.x_ + a.y_ * b.y_ + a.z_ * b.z_;
 }
