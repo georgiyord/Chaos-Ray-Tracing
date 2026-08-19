@@ -13,6 +13,7 @@
         src = self;
 
         buildPhase = ''
+          NIX_ENFORCE_NO_NATIVE=0
           make release libDebug libRelease libReleaseWithSymbols
         '';
 

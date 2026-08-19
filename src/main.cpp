@@ -20,6 +20,7 @@ struct ProgramSettings {
   std::string sceneFilePath;
   RenderMode renderMode = RenderMode::Default;
   Color backgroundColor = {floatNaN, floatNaN, floatNaN};
+  size_t bucketSize = 0;
 };
 
 inline void printUsage(const char *binaryName,
@@ -38,8 +39,10 @@ inline void printUsage(const char *binaryName,
          "scene file.\n"
       << "\t-r <render mode>            The render mode. Valid arguments are: "
          "'default', 'normal', 'distance', 'gooch', 'barycentric'\n"
-      << "\t-b <r g b>                  Background color overwrite. Values are "
+      << "\t-c <r g b>                  Background color overwrite. Values are "
          "in the range [0-1]'\n"
+      << "\t-b <bucket size>            Bucket size: the size of a chunk a "
+         "single thread worker renders\n"
       << '\n';
 }
 
@@ -118,6 +121,7 @@ inline ProgramSettings processArgs(int argc, const char *const *argv) {
   constexpr u8 SCENE_FLAG = 1 << 3;
   constexpr u8 RENDER_FLAG = 1 << 4;
   constexpr u8 BACKGROUND_FLAG = 1 << 5;
+  constexpr u8 BUCKET_FLAG = 1 << 6;
 
   for (int i = 1; i < argc; ++i) {
     const std::string_view argument = argv[i];
@@ -165,7 +169,7 @@ inline ProgramSettings processArgs(int argc, const char *const *argv) {
       flags |= RENDER_FLAG;
       programSettings.renderMode = parseRenderModeEnumString(argv[++i]);
       break;
-    case 'b':
+    case 'c':
       if ((flags & BACKGROUND_FLAG) != 0 || i == argc - 1) {
         printUsageAndExit<EXIT_FAILURE>(argv[0]);
       }
@@ -173,6 +177,13 @@ inline ProgramSettings processArgs(int argc, const char *const *argv) {
       programSettings.backgroundColor.red() = parseFloating(argv[++i]);
       programSettings.backgroundColor.green() = parseFloating(argv[++i]);
       programSettings.backgroundColor.blue() = parseFloating(argv[++i]);
+      break;
+    case 'b':
+      if ((flags & BUCKET_FLAG) != 0 || i == argc - 1) {
+        printUsageAndExit<EXIT_FAILURE>(argv[0]);
+      }
+      flags |= BUCKET_FLAG;
+      programSettings.bucketSize = parseInteger(argv[++i]);
       break;
     default:
       printUsageAndExit<EXIT_FAILURE>(argv[0]);
@@ -193,18 +204,21 @@ int main(int argc, char **argv) {
   try {
     const ProgramSettings programSettings = processArgs(argc, argv);
     auto scene = Scene::loadScene(programSettings.sceneFilePath);
+    Renderer renderer(scene);
     if (programSettings.renderWidth != 0) {
       scene.overwriteWidth(programSettings.renderWidth);
     }
     if (programSettings.renderHeight != 0) {
       scene.overwriteHeight(programSettings.renderHeight);
     }
+    if (programSettings.bucketSize != 0) {
+      scene.bucket_size_ = programSettings.bucketSize;
+    }
     if (!std::isnan(programSettings.backgroundColor.red()) &&
         !std::isnan(programSettings.backgroundColor.green()) &&
         !std::isnan(programSettings.backgroundColor.blue())) {
       scene.overwriteBackgroundColor(programSettings.backgroundColor);
     }
-    Renderer renderer(scene);
     // renderer.overwriteMaxRayDepth(1);
     auto buffer = renderer.createColorBuffer();
     auto time = renderer.takeSnapshot(buffer, programSettings.renderMode);

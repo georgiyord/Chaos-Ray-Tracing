@@ -7,6 +7,7 @@ namespace RenderEngine {
 struct Ray {
   vec3 origin_;
   vec3 direction_;
+  vec3 directionInverse_;
   size_t depthChances_;
   // returns the distance from the ray origin to the intersection point, or NaN
   // if the ray doesn't intersect the triangle.
