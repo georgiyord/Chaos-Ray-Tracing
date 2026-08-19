@@ -40,49 +40,51 @@ Color handleRefractiveMaterial(const Scene &, const IntersectResult &,
 Renderer::Renderer(const Scene &scene) noexcept
     : threadPool_{ThreadPool::getInstance()}, scene_{scene} {}
 
+//Moller method with barycentric coordinates
 [[nodiscard]] IntersectResult intersects(const Scene &scene, const Ray &ray,
                                          size_t id_triangle) noexcept {
   const auto [id_vertex1, id_vertex2, id_vertex3, id_mesh] =
       scene.triangles_[id_triangle];
-  const vec3 &point1 = scene.vertices_[id_vertex1].position;
-  const vec3 &point2 = scene.vertices_[id_vertex2].position;
-  const vec3 &point3 = scene.vertices_[id_vertex3].position;
-  const vec3 &normal = scene.triangleNormals_[id_triangle];
-  const auto rayStep = dotProduct(ray.direction_, normal);
   IntersectResult intersectResult;
-  if (rayStep == 0) {
-    intersectResult.steps = floatNaN;
-    return intersectResult;
-  }
-  const auto planeDistance = dotProduct(point1 - ray.origin_, normal);
-  float tSteps = planeDistance / rayStep;
+  const vec3 &v1 = scene.vertices_[id_vertex1].position;
+  const vec3 &v2 = scene.vertices_[id_vertex2].position;
+  const vec3 &v3 = scene.vertices_[id_vertex3].position;
+  const vec3 v1v2 = v2 - v1;
+  const vec3 v1v3 = v3 - v1;
+  const vec3 v1O = ray.origin_ - v1;
+  const vec3 shared1 = crossProduct(v1v3, v1O);
+  const vec3 shared2 = crossProduct(v1v2, ray.direction_);
+  const float divisor = dotProduct(shared2, v1v3);
 
-  if (tSteps < 0) {
+  if (std::abs(divisor) < 1e-6f){
     intersectResult.steps = floatNaN;
     return intersectResult;
   }
-  vec3 pointPlaneIntersection = ray.origin_ + tSteps * ray.direction_;
 
-  if (dotProduct(normal, crossProduct(point2 - point1,
-                                      pointPlaneIntersection - point1)) <
-      -RENDERENGINE_HITPOINT_BIAS) {
+  const float reciprocal = 1 / divisor;
+  const float u = dotProduct(shared1, ray.direction_) * reciprocal;
+  if (u < 0 || u > 1){
     intersectResult.steps = floatNaN;
     return intersectResult;
   }
-  if (dotProduct(normal, crossProduct(point3 - point2,
-                                      pointPlaneIntersection - point2)) <
-      -RENDERENGINE_HITPOINT_BIAS) {
+  const float v = dotProduct(shared2, v1O) * reciprocal;
+  if (v < 0 || v > 1){
     intersectResult.steps = floatNaN;
     return intersectResult;
   }
-  if (dotProduct(normal, crossProduct(point1 - point3,
-                                      pointPlaneIntersection - point3)) <
-      -RENDERENGINE_HITPOINT_BIAS) {
+  const float w = 1 - u - v;
+  if (w < 0 || w > 1){
     intersectResult.steps = floatNaN;
     return intersectResult;
   }
-  intersectResult.steps = tSteps;
-  intersectResult.hitPoint = ray.origin_ + tSteps * ray.direction_;
+  const float t = dotProduct(shared1, v1v2) * reciprocal; 
+  if (t < 0){
+    intersectResult.steps = floatNaN;
+    return intersectResult;
+  }
+  
+  intersectResult.steps = t;
+  intersectResult.hitPoint = ray.origin_ + t * ray.direction_;
   intersectResult.id_triangle = id_triangle;
   intersectResult.id_mesh = scene.triangles_[id_triangle].id_mesh_;
   intersectResult.id_material =
@@ -95,35 +97,39 @@ Renderer::Renderer(const Scene &scene) noexcept
                                   const float distanceSquared) noexcept {
   const auto [id_vertex1, id_vertex2, id_vertex3, id_mesh] =
       scene.triangles_[id_triangle];
-  const vec3 &point1 = scene.vertices_[id_vertex1].position;
-  const vec3 &point2 = scene.vertices_[id_vertex2].position;
-  const vec3 &point3 = scene.vertices_[id_vertex3].position;
-  const vec3 &normal = scene.triangleNormals_[id_triangle];
-  const auto rayStep = dotProduct(ray.direction_, normal);
-  if (rayStep == 0)
-    return false;
-  const auto planeDistance = dotProduct(point1 - ray.origin_, normal);
-  float tSteps = planeDistance / rayStep;
+  const vec3 &v1 = scene.vertices_[id_vertex1].position;
+  const vec3 &v2 = scene.vertices_[id_vertex2].position;
+  const vec3 &v3 = scene.vertices_[id_vertex3].position;
+  const vec3 v1v2 = v2 - v1;
+  const vec3 v1v3 = v3 - v1;
+  const vec3 shared2 = crossProduct(v1v2, ray.direction_);
+  const float divisor = dotProduct(shared2, v1v3);
 
-  if (tSteps < 0)
+  if (std::abs(divisor) < 1e-6f){
     return false;
-  vec3 pointPlaneIntersection = ray.origin_ + tSteps * ray.direction_;
+  }
 
-  if (dotProduct(normal, crossProduct(point2 - point1,
-                                      pointPlaneIntersection - point1)) <
-      -RENDERENGINE_HITPOINT_BIAS)
-    return false;
-  if (dotProduct(normal, crossProduct(point3 - point2,
-                                      pointPlaneIntersection - point2)) <
-      -RENDERENGINE_HITPOINT_BIAS)
-    return false;
-  if (dotProduct(normal, crossProduct(point1 - point3,
-                                      pointPlaneIntersection - point3)) <
-      -RENDERENGINE_HITPOINT_BIAS)
-    return false;
+  const vec3 v1O = ray.origin_ - v1;
+  const vec3 shared1 = crossProduct(v1v3, v1O);
 
-  if (tSteps * tSteps > distanceSquared)
+  const float reciprocal = 1 / divisor;
+  const float u = dotProduct(shared1, ray.direction_) * reciprocal;
+  if (u < 0 || u > 1){
     return false;
+  }
+  const float v = dotProduct(shared2, v1O) * reciprocal;
+  if (v < 0 || v > 1){
+    return false;
+  }
+  const float w = 1 - u - v;
+  if (w < 0 || w > 1){
+    return false;
+  }
+  const float t = dotProduct(shared1, v1v2) * reciprocal; 
+  if (t < 0 || t * t > distanceSquared){
+    return false;
+  }
+  
   return true;
 }
 
@@ -134,10 +140,10 @@ getBarycentricCoordinates(const vec3 &hitPoint, const vec3 &pos_vertex1,
   const auto v1p = hitPoint - pos_vertex1;
   const auto v1v2 = pos_vertex2 - pos_vertex1;
   const auto v1v3 = pos_vertex3 - pos_vertex1;
-  const auto triangleArea = crossProduct(v1v2, v1v3).length();
-  const auto reciprocalArea = 1 / triangleArea;
-  const auto u = crossProduct(v1p, v1v3).length() * reciprocalArea;
-  const auto v = crossProduct(v1v2, v1p).length() * reciprocalArea;
+  const auto triangleAreaDouble = crossProduct(v1v2, v1v3).length();
+  const auto reciprocal_triangleAreaDouble = 1 / triangleAreaDouble;
+  const auto u = crossProduct(v1p, v1v3).length() * reciprocal_triangleAreaDouble;
+  const auto v = crossProduct(v1v2, v1p).length() * reciprocal_triangleAreaDouble;
   return {u, v};
 }
 
