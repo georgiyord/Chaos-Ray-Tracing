@@ -92,7 +92,7 @@ Renderer::Renderer(const Scene &scene) noexcept
 
 [[nodiscard]] bool intersectsFast(const Scene &scene, const Ray &ray,
                                   const size_t id_triangle,
-                                  const float distance) noexcept {
+                                  const float distanceSquared) noexcept {
   const auto [id_vertex1, id_vertex2, id_vertex3, id_mesh] =
       scene.triangles_[id_triangle];
   const vec3 &point1 = scene.vertices_[id_vertex1].position;
@@ -122,7 +122,7 @@ Renderer::Renderer(const Scene &scene) noexcept
       -RENDERENGINE_HITPOINT_BIAS)
     return false;
 
-  if (tSteps > distance)
+  if (tSteps * tSteps > distanceSquared)
     return false;
   return true;
 }
