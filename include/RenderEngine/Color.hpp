@@ -13,14 +13,15 @@ class Color {
   float r, g, b;
 
 public:
- Color(float red = 0.f, float green = 0.f, float blue = 0.f);
- Color(float grayValue);
+  Color(float red = 0.f, float green = 0.f, float blue = 0.f);
+  Color(float grayValue);
 
   [[nodiscard]] ColorView<u8> getU8View() const noexcept;
   [[nodiscard]] ColorView<u16> getU16View() const noexcept;
 
- Color &operator*=(float val);
-
+  Color &operator*=(float val);
+  [[nodiscard]] bool operator==(Color rhs) const noexcept;
+  [[nodiscard]] bool operator!=(Color rhs) const noexcept;
   [[nodiscard]] float red() const noexcept;
   [[nodiscard]] float green() const noexcept;
   [[nodiscard]] float blue() const noexcept;
@@ -29,10 +30,10 @@ public:
   [[nodiscard]] float &green() noexcept;
   [[nodiscard]] float &blue() noexcept;
 
-  [[nodiscard]] static Color
-  elementWiseMultiplication(const Color &lhs, const Color &rhs);
+  [[nodiscard]] static Color elementWiseMultiplication(const Color &lhs,
+                                                       const Color &rhs);
   [[nodiscard]] static Color elementWiseAddition(const Color &lhs,
-                                                           const Color &rhs);
+                                                 const Color &rhs);
 
   [[nodiscard]] static float clampChannel(float channel) noexcept;
 };

@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
     }
     // renderer.overwriteMaxRayDepth(1);
     auto buffer = renderer.createColorBuffer();
-    auto time = renderer.takeSnapshot(buffer, programSettings.renderMode);
+    auto time = renderer.takeSnapshot(buffer, programSettings.renderMode, 2);
     std::cout << time << std::endl;
     //   }
     //   const auto timerStart = std::chrono::steady_clock::now();

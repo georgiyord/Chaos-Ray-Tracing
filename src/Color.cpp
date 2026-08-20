@@ -9,14 +9,12 @@ float r, g, b;
   return channel > 1.f ? 1.f : channel;
 }
 
- Color::Color(float red, float green, float blue)
-    : r(red), g(green), b(blue) {
+Color::Color(float red, float green, float blue) : r(red), g(green), b(blue) {
   if (red < 0.f || green < 0.f || blue < 0.f)
     throw std::runtime_error("Color values cannot be negative");
 }
 
- Color::Color(float grayValue)
-    : r(grayValue), g(grayValue), b(grayValue) {
+Color::Color(float grayValue) : r(grayValue), g(grayValue), b(grayValue) {
   if (grayValue < 0.f)
     throw std::runtime_error("Color values cannot be negative");
 }
@@ -33,17 +31,23 @@ float r, g, b;
     throw std::runtime_error("Color values cannot be negative");
   return Color{c.red() * val, c.green() * val, c.blue() * val};
 }
-[[nodiscard]] Color operator*(float val, const Color &c) {
-  return c * val;
-}
+[[nodiscard]] Color operator*(float val, const Color &c) { return c * val; }
 
- Color &Color::operator*=(float val) {
+Color &Color::operator*=(float val) {
   if (val < 0.f)
     throw std::runtime_error("Color values cannot be negative");
   r *= val;
   g *= val;
   b *= val;
   return *this;
+}
+
+[[nodiscard]] bool Color::operator==(Color rhs) const noexcept {
+  return r == rhs.r && g == rhs.g && b == rhs.b;
+}
+
+[[nodiscard]] bool Color::operator!=(Color rhs) const noexcept {
+  return r != rhs.r || g != rhs.g || b != rhs.b;
 }
 
 [[nodiscard]] float Color::red() const noexcept { return r; }
@@ -54,12 +58,12 @@ float r, g, b;
 [[nodiscard]] float &Color::green() noexcept { return g; }
 [[nodiscard]] float &Color::blue() noexcept { return b; }
 
-[[nodiscard]] Color
-Color::elementWiseMultiplication(const Color &lhs, const Color &rhs) {
+[[nodiscard]] Color Color::elementWiseMultiplication(const Color &lhs,
+                                                     const Color &rhs) {
   return {lhs.r * rhs.r, lhs.g * rhs.g, lhs.b * rhs.b};
 }
 [[nodiscard]] Color Color::elementWiseAddition(const Color &lhs,
-                                                         const Color &rhs) {
+                                               const Color &rhs) {
   return {lhs.r + rhs.r, lhs.g + rhs.g, lhs.b + rhs.b};
 }
 
