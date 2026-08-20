@@ -11,8 +11,8 @@ class Matrix3x3 {
   std::array<float, 9> data_;
 
 public:
- Matrix3x3() noexcept;
- Matrix3x3(std::array<float, 9> data) noexcept;
+  Matrix3x3() noexcept;
+  Matrix3x3(std::array<float, 9> data) noexcept;
 
   [[nodiscard]] const float &operator[](size_t row, size_t col) const;
 

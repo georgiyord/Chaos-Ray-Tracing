@@ -26,8 +26,6 @@
 
 namespace RenderEngine {
 
-
-
 Renderer::Renderer(const Scene &scene) noexcept
     : threadPool_{ThreadPool::getInstance()}, scene_{scene} {}
 
@@ -314,7 +312,7 @@ goochShade(const Scene &scene,
 }
 
 [[nodiscard]] Color Renderer::traceRay(const Scene &scene, const Ray &ray,
-                             RenderMode debugRenderMode) const {
+                                       RenderMode debugRenderMode) const {
   IntersectResult intersectResult;
   std::vector<size_t> trianglIds;
   scene.accelerationTree_.intersects(ray, trianglIds);
@@ -363,7 +361,8 @@ goochShade(const Scene &scene,
                              std::to_string(__LINE__) +
                              ". That should not happen!");
   case MaterialType::DIFFUSE:
-    return handleDiffuseMaterial(intersectResult, ray.depthChances_, debugRenderMode);
+    return handleDiffuseMaterial(intersectResult, ray.depthChances_,
+                                 debugRenderMode);
   case MaterialType::CONSTANT:
     return getTextureColor(scene, intersectResult);
   case MaterialType::REFLECTIVE:
@@ -395,8 +394,9 @@ goochShade(const Scene &scene,
 }
 
 [[nodiscard]] Color
-Renderer::handleDiffuseMaterial(
-                      const IntersectResult &intersectResult, size_t prevRayDepthChances, RenderMode debugRenderMode) const noexcept {
+Renderer::handleDiffuseMaterial(const IntersectResult &intersectResult,
+                                size_t prevRayDepthChances,
+                                RenderMode debugRenderMode) const noexcept {
   if (prevRayDepthChances == 0) {
     return scene_.backgroundColor_;
   }
@@ -421,7 +421,9 @@ Renderer::handleDiffuseMaterial(
   thread_local std::uniform_real_distribution<float> dis(-180.f, 180.f);
 
   auto offsetHitPoint = hitPoint + RENDERENGINE_SHADOW_BIAS * finalNormal;
-  Color commumilativeColor =  traceShadowRay(scene_, offsetHitPoint, finalNormal) * getTextureColor(scene_, intersectResult);
+  Color commumilativeColor =
+      traceShadowRay(scene_, offsetHitPoint, finalNormal) *
+      getTextureColor(scene_, intersectResult);
   size_t successful = 1;
 
   for (size_t i = 0; i < n_diffuseReflectionsGI_; ++i) {
@@ -429,11 +431,15 @@ Renderer::handleDiffuseMaterial(
     const float phi = dis(gen);
     const vec3 randomUnitVec{std::cos(phi) * std::sin(theta),
                              std::sin(phi) * std::sin(theta), std::cos(theta)};
-    const vec3 hemisphereSampleRayDir = (finalNormal + randomUnitVec).normalise();
-    const Ray ray{intersectResult.hitPoint + hemisphereSampleRayDir * RENDERENGINE_HITPOINT_BIAS, hemisphereSampleRayDir, prevRayDepthChances - 1};
+    const vec3 hemisphereSampleRayDir =
+        (finalNormal + randomUnitVec).normalise();
+    const Ray ray{intersectResult.hitPoint +
+                      hemisphereSampleRayDir * RENDERENGINE_HITPOINT_BIAS,
+                  hemisphereSampleRayDir, prevRayDepthChances - 1};
     const Color result = traceRay(scene_, ray, debugRenderMode);
-    if (result != scene_.backgroundColor_){
-      commumilativeColor = Color::elementWiseAddition(commumilativeColor, result);
+    if (result != scene_.backgroundColor_) {
+      commumilativeColor =
+          Color::elementWiseAddition(commumilativeColor, result);
       ++successful;
     }
   }
@@ -444,8 +450,8 @@ Renderer::handleDiffuseMaterial(
 
 [[nodiscard]] Color
 Renderer::handleReflectiveMaterial(const Scene &scene,
-                         const IntersectResult &intersectResult,
-                         const Ray &previousRay) const noexcept {
+                                   const IntersectResult &intersectResult,
+                                   const Ray &previousRay) const noexcept {
   if (previousRay.depthChances_ == 0) {
     return scene.backgroundColor_;
   }
@@ -478,8 +484,8 @@ Renderer::handleReflectiveMaterial(const Scene &scene,
 // objects
 [[nodiscard]] Color
 Renderer::handleRefractiveMaterial(const Scene &scene,
-                         const IntersectResult &intersectResult,
-                         const Ray &previousRay) const noexcept {
+                                   const IntersectResult &intersectResult,
+                                   const Ray &previousRay) const noexcept {
   if (previousRay.depthChances_ == 0) {
     return scene.backgroundColor_;
   }
@@ -560,10 +566,10 @@ Renderer::handleRefractiveMaterial(const Scene &scene,
   }
 }
 
-void Renderer::renderBucket(const Scene &scene, const size_t bucket,
-                  const size_t bucketCols, Color *const buffer,
-                  RenderMode debugRenderMode, size_t rayMaxDepth,
-                  size_t raySamplesPerPixelSquareSide) const noexcept {
+void Renderer::renderBucket(
+    const Scene &scene, const size_t bucket, const size_t bucketCols,
+    Color *const buffer, RenderMode debugRenderMode, size_t rayMaxDepth,
+    size_t raySamplesPerPixelSquareSide) const noexcept {
   const float resolutionWidth = static_cast<float>(scene.width_);
   const float resolutionHeight = static_cast<float>(scene.height_);
   size_t bucketOffsetX = (bucket % bucketCols) * scene.bucket_size_;

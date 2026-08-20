@@ -3,8 +3,8 @@
 #include <stdexcept>
 
 namespace RenderEngine {
- Matrix3x3::Matrix3x3() noexcept : data_{} {}
- Matrix3x3::Matrix3x3(std::array<float, 9> data) noexcept : data_{data} {}
+Matrix3x3::Matrix3x3() noexcept : data_{} {}
+Matrix3x3::Matrix3x3(std::array<float, 9> data) noexcept : data_{data} {}
 
 [[nodiscard]] const float &Matrix3x3::operator[](size_t row, size_t col) const {
   if (row >= 3 || col >= 3)
@@ -19,7 +19,8 @@ namespace RenderEngine {
   return {{1, 0, 0, 0, 1, 0, 0, 0, 1}};
 }
 
-[[nodiscard]] Matrix3x3 Matrix3x3::operator*(const Matrix3x3 &rhs) const noexcept {
+[[nodiscard]] Matrix3x3
+Matrix3x3::operator*(const Matrix3x3 &rhs) const noexcept {
   return {{
       data_[0] * rhs[0, 0] + data_[1] * rhs[1, 0] + data_[2] * rhs[2, 0],
       data_[0] * rhs[0, 1] + data_[1] * rhs[1, 1] + data_[2] * rhs[2, 1],
@@ -33,17 +34,21 @@ namespace RenderEngine {
   }};
 }
 
-[[nodiscard]] vec3 operator*(const vec3 &vec, const Matrix3x3 &matrix) noexcept {
-  return {
-      vec.x_ * matrix[0, 0] + vec.y_ * matrix[1, 0] + vec.z_ * matrix[2, 0],
-      vec.x_ * matrix[0, 1] + vec.y_ * matrix[1, 1] + vec.z_ * matrix[2, 1],
-      vec.x_ * matrix[0, 2] + vec.y_ * matrix[1, 2] + vec.z_ * matrix[2, 2]};
+[[nodiscard]] vec3 operator*(const vec3 &vec,
+                             const Matrix3x3 &matrix) noexcept {
+  return {vec.x_ * matrix[0, 0] + vec.y_ * matrix[1, 0] + vec.z_ * matrix[2, 0],
+          vec.x_ * matrix[0, 1] + vec.y_ * matrix[1, 1] + vec.z_ * matrix[2, 1],
+          vec.x_ * matrix[0, 2] + vec.y_ * matrix[1, 2] +
+              vec.z_ * matrix[2, 2]};
 }
 
- vec3& operator*=(vec3 &vec, const Matrix3x3 &matrix) noexcept {
-  float newX = vec.x_ * matrix[0, 0] + vec.y_ * matrix[1, 0] + vec.z_ * matrix[2, 0];
-  float newY = vec.x_ * matrix[0, 1] + vec.y_ * matrix[1, 1] + vec.z_ * matrix[2, 1];
-  float newZ = vec.x_ * matrix[0, 2] + vec.y_ * matrix[1, 2] + vec.z_ * matrix[2, 2];
+vec3 &operator*=(vec3 &vec, const Matrix3x3 &matrix) noexcept {
+  float newX =
+      vec.x_ * matrix[0, 0] + vec.y_ * matrix[1, 0] + vec.z_ * matrix[2, 0];
+  float newY =
+      vec.x_ * matrix[0, 1] + vec.y_ * matrix[1, 1] + vec.z_ * matrix[2, 1];
+  float newZ =
+      vec.x_ * matrix[0, 2] + vec.y_ * matrix[1, 2] + vec.z_ * matrix[2, 2];
   vec.x_ = newX;
   vec.y_ = newY;
   vec.z_ = newZ;
@@ -60,4 +65,4 @@ std::ostream &operator<<(std::ostream &os, const Matrix3x3 &mat) {
      << std::setw(4) << mat[2, 2];
   return os;
 }
-}
+} // namespace RenderEngine
