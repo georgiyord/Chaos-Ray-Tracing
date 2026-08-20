@@ -19,7 +19,7 @@ struct IntersectResult {
 class Renderer {
 
   ThreadPool &threadPool_;
-  size_t rayMaxDepth_ = 8;
+  size_t rayMaxDepth_ = 5;
   size_t n_diffuseReflectionsGI_ = 0;
   const Scene &scene_;
 
@@ -28,7 +28,7 @@ public:
   std::chrono::milliseconds
   takeSnapshot(Color *buffer, RenderMode debugRenderMode = RenderMode::Default,
                size_t raySamplesPerPixelSquareSide = 1) const;
-  Color *createColorBuffer() const;
+  std::unique_ptr<Color[]> createColorBuffer() const;
 
   void overwriteMaxRayDepth(size_t) noexcept;
 

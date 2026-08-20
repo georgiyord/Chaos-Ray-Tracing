@@ -126,7 +126,7 @@ Scene::Scene(size_t width, size_t height, size_t bucket_size,
   std::vector<Texture> textures;
   textures.reserve(document["textures"].GetArray().Size());
   std::vector<Material> materials;
-  textures.reserve(document["materials"].GetArray().Size());
+  materials.reserve(document["materials"].GetArray().Size());
   std::vector<Vertex> vertices;
   std::vector<Triangle> triangles;
   std::vector<vec3> triangleNormals;

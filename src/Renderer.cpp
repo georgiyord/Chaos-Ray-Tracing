@@ -17,6 +17,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <memory>
 #include <random>
 #include <stack>
 #include <stdexcept>
@@ -286,10 +287,11 @@ goochShade(const Scene &scene,
   const Color warm = {.3f, .3f, 0};
   const float warmFactor = .6f;
   const float coldFactor = .2f;
-  const Color coldTint = Color::elementWiseAddition(
-      cold, coldFactor * getTextureColor(scene, intersectResult));
-  const Color warmTint = Color::elementWiseAddition(
-      warm, warmFactor * getTextureColor(scene, intersectResult));
+  const Color textureColor = getTextureColor(scene, intersectResult);
+  const Color coldTint =
+      Color::elementWiseAddition(cold, coldFactor * textureColor);
+  const Color warmTint =
+      Color::elementWiseAddition(warm, warmFactor * textureColor);
   float lightFactor = 0;
   vec3 finalNormal;
   if (scene.materials_[intersectResult.id_material].smoothShading) {
@@ -382,12 +384,10 @@ goochShade(const Scene &scene,
     if (tmp > 0.f)
       tmp = -tmp;
 
-    // gcc's std::pow implementation promotes from arguments float, int to
-    // double, double instead of casting, i trust the compiler will see that 5.f
-    // is actually an integer and will not use instructions for float * float at
-    // least if my assumption that there are instructions for float * int is
-    // correct ¯\_(ツ)_/¯
-    float fresnelFactor = .5f * std::pow(1.f + tmp, 5.f);
+    const float &ior = scene.materials_[intersectResult.id_material].ior;
+    const float reciprocate = 1.f / (ior + 1.f);
+    const float refractionRelation = (1.f - ior) * (1.f - ior) * reciprocate * reciprocate;
+    float fresnelFactor = refractionRelation + (1 - refractionRelation) * std::pow(1 - std::abs(dotProduct(finalNormal, ray.direction_)), 5.f);
 
     return Color::elementWiseAddition(fresnelFactor * reflectionColor,
                                       (1 - fresnelFactor) * refractionColor);
@@ -510,7 +510,6 @@ Renderer::handleRefractiveMaterial(const Scene &scene,
     vec3 A = (-1) * finalNormal * cosR;
     vec3 B = previousRay.direction_ + finalNormal * cosI;
     vec3 refractionDirection = A + B.normalise() * sinR;
-    assert(refractionDirection.x_ != floatNaN);
 
     Ray refractedRay{hitPoint - RENDERENGINE_HITPOINT_BIAS * finalNormal,
                      refractionDirection, previousRay.depthChances_ - 1};
@@ -518,9 +517,10 @@ Renderer::handleRefractiveMaterial(const Scene &scene,
     Color reflectionColor = traceRay(scene, reflectedRay, RenderMode::Default);
     Color refractionColor = traceRay(scene, refractedRay, RenderMode::Default);
 
-    float fresnelFactor =
-        .5f *
-        std::pow(1.f + dotProduct(previousRay.direction_, finalNormal), 10.f);
+    //Shlick's aproximation
+    const float reciprocate = 1.f / (ior + 1.f);
+    const float refractionRelation = (ior - 1.f) * (ior - 1.f) * reciprocate * reciprocate;
+    float fresnelFactor = refractionRelation + (1 - refractionRelation) * std::pow(1 + dotProduct(finalNormal, previousRay.direction_), 5.f);
 
     return Color::elementWiseAddition(fresnelFactor * reflectionColor,
                                       (1 - fresnelFactor) * refractionColor);
@@ -542,7 +542,6 @@ Renderer::handleRefractiveMaterial(const Scene &scene,
     vec3 A = finalNormal * cosR;
     vec3 B = previousRay.direction_ - finalNormal * cosI;
     vec3 refractionDirection = A + B.normalise() * sinR;
-    assert(refractionDirection.x_ != floatNaN);
     if (sinI >= 1 / ior) {
       return reflectionColor;
     }
@@ -552,9 +551,9 @@ Renderer::handleRefractiveMaterial(const Scene &scene,
 
     Color refractionColor = traceRay(scene, refractedRay, RenderMode::Default);
 
-    float fresnelFactor =
-        .5f *
-        std::pow(1.f - dotProduct(previousRay.direction_, finalNormal), 5.f);
+    const float reciprocate = 1.f / (ior + 1.f);
+    const float refractionRelation = (1.f - ior) * (1.f - ior) * reciprocate * reciprocate;
+    float fresnelFactor = refractionRelation + (1 - refractionRelation) * std::pow(1 - dotProduct(finalNormal, previousRay.direction_), 5.f);
 
     return Color::elementWiseAddition(fresnelFactor * reflectionColor,
                                       (1 - fresnelFactor) * refractionColor);
@@ -611,8 +610,8 @@ void Renderer::renderBucket(const Scene &scene, const size_t bucket,
   }
 }
 
-Color *Renderer::createColorBuffer() const {
-  return new Color[scene_.width_ * scene_.height_];
+std::unique_ptr<Color[]> Renderer::createColorBuffer() const {
+  return std::unique_ptr<Color[]>{new Color[scene_.width_ * scene_.height_]};
 }
 
 // todo pass settings as a singular struct context object
