@@ -16,7 +16,7 @@ class Renderer {
 public:
   Renderer(const Scene &) noexcept;
   std::chrono::milliseconds takeSnapshot(Color *buffer,
-                    RenderMode debugRenderMode = RenderMode::Default) const;
+                    RenderMode debugRenderMode = RenderMode::Default, size_t raySamplesPerPixelSquareSide = 1) const;
   Color *createColorBuffer() const;
 
   void overwriteMaxRayDepth(size_t) noexcept;

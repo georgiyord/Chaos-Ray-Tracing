@@ -542,28 +542,38 @@ handleRefractiveMaterial(const Scene &scene,
 
 void renderBucket(const Scene &scene, const size_t bucket,
                   const size_t bucketCols, Color *const buffer,
-                  RenderMode debugRenderMode, size_t rayMaxDepth) noexcept {
+                  RenderMode debugRenderMode, size_t rayMaxDepth, size_t raySamplesPerPixelSquareSide) noexcept {
   const float resolutionWidth = static_cast<float>(scene.width_);
   const float resolutionHeight = static_cast<float>(scene.height_);
   size_t bucketOffsetX = (bucket % bucketCols) * scene.bucket_size_;
   size_t bucketOffsetY = (bucket / bucketCols) * scene.bucket_size_;
+  const float reciprocal = (1.f / (static_cast<float>(raySamplesPerPixelSquareSide) + 1.f));
   for (size_t y = 0; y < scene.bucket_size_; ++y) {
     for (size_t x = 0; x < scene.bucket_size_; ++x) {
-      float worldX = static_cast<float>(bucketOffsetX + x) + .5f;
-      float worldY = static_cast<float>(bucketOffsetY + y) + .5f;
+      Color color;
+      for (size_t rx = 0; rx < raySamplesPerPixelSquareSide; ++rx){
+        for (size_t ry = 0; ry < raySamplesPerPixelSquareSide; ++ry){
+          float worldX = static_cast<float>(bucketOffsetX + x) + reciprocal * static_cast<float_t>(1 + rx);
+          float worldY = static_cast<float>(bucketOffsetY + y) + reciprocal * static_cast<float_t>(1 + ry);
 
-      worldX /= resolutionWidth;
-      worldY /= resolutionHeight;
+          worldX /= resolutionWidth;
+          worldY /= resolutionHeight;
 
-      worldX = worldX * 2 - 1;
-      worldY = 1 - worldY * 2;
+          worldX = worldX * 2 - 1;
+          worldY = 1 - worldY * 2;
 
-      worldX *= (resolutionWidth / resolutionHeight);
-      vec3 direction{worldX, worldY, -1.0f};
-      direction = direction * scene.camera_.orientation();
-      Ray ray{scene.camera_.position(), direction, rayMaxDepth};
-      buffer[(bucketOffsetX + x) + (bucketOffsetY + y) * scene.width_] =
-          traceRay(scene, ray, debugRenderMode);
+          worldX *= (resolutionWidth / resolutionHeight);
+          vec3 direction{worldX, worldY, -1.0f};
+          direction = direction * scene.camera_.orientation();
+          Ray ray{scene.camera_.position(), direction, rayMaxDepth};
+
+          color = Color::elementWiseAddition(color, traceRay(scene, ray, debugRenderMode));
+        }
+      }
+      color.red() /= static_cast<float>(raySamplesPerPixelSquareSide * raySamplesPerPixelSquareSide);
+      color.blue() /= static_cast<float>(raySamplesPerPixelSquareSide * raySamplesPerPixelSquareSide);
+      color.green() /= static_cast<float>(raySamplesPerPixelSquareSide * raySamplesPerPixelSquareSide);
+      buffer[(bucketOffsetX + x) + (bucketOffsetY + y) * scene.width_] = color;
     }
   }
 }
@@ -572,7 +582,12 @@ Color* Renderer::createColorBuffer() const {
   return new Color[scene_.width_ * scene_.height_];
 }
 
-std::chrono::milliseconds Renderer::takeSnapshot(Color* const buffer, RenderMode debugRenderMode) const {
+
+//todo pass settings as a singular struct context object
+std::chrono::milliseconds Renderer::takeSnapshot(Color* const buffer, RenderMode debugRenderMode, size_t raySamplesPerPixelSquareSide) const {
+  if (raySamplesPerPixelSquareSide == 0){
+    throw std::runtime_error("Ray samples should be more than 0!");
+  }
   const auto &width = scene_.width_;
   const auto &height = scene_.height_;
   const auto &bucket_size = scene_.bucket_size_;
@@ -588,9 +603,9 @@ std::chrono::milliseconds Renderer::takeSnapshot(Color* const buffer, RenderMode
   for (size_t i = 0; i < scene_.width_ * scene_.height_ / scene_.bucket_size_ /
                              scene_.bucket_size_;
        ++i) {
-    threadPool_.addTask([this, buffer, debugRenderMode, i]() {
+    threadPool_.addTask([this, buffer, debugRenderMode, i, raySamplesPerPixelSquareSide]() {
       renderBucket(scene_, i, scene_.width_ / scene_.bucket_size_, buffer,
-                   debugRenderMode, rayMaxDepth_);
+                   debugRenderMode, rayMaxDepth_, raySamplesPerPixelSquareSide);
     });
   }
   threadPool_.startAndWait();
