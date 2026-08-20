@@ -40,7 +40,7 @@ Color handleRefractiveMaterial(const Scene &, const IntersectResult &,
 Renderer::Renderer(const Scene &scene) noexcept
     : threadPool_{ThreadPool::getInstance()}, scene_{scene} {}
 
-//Moller method with barycentric coordinates
+// Moller method with barycentric coordinates
 [[nodiscard]] IntersectResult intersects(const Scene &scene, const Ray &ray,
                                          size_t id_triangle) noexcept {
   const auto [id_vertex1, id_vertex2, id_vertex3, id_mesh] =
@@ -56,33 +56,33 @@ Renderer::Renderer(const Scene &scene) noexcept
   const vec3 shared2 = crossProduct(v1v2, ray.direction_);
   const float divisor = dotProduct(shared2, v1v3);
 
-  if (std::abs(divisor) < 1e-6f){
+  if (std::abs(divisor) < 1e-6f) {
     intersectResult.steps = floatNaN;
     return intersectResult;
   }
 
   const float reciprocal = 1 / divisor;
   const float u = dotProduct(shared1, ray.direction_) * reciprocal;
-  if (u < 0 || u > 1){
+  if (u < 0 || u > 1) {
     intersectResult.steps = floatNaN;
     return intersectResult;
   }
   const float v = dotProduct(shared2, v1O) * reciprocal;
-  if (v < 0 || v > 1){
+  if (v < 0 || v > 1) {
     intersectResult.steps = floatNaN;
     return intersectResult;
   }
   const float w = 1 - u - v;
-  if (w < 0 || w > 1){
+  if (w < 0 || w > 1) {
     intersectResult.steps = floatNaN;
     return intersectResult;
   }
-  const float t = dotProduct(shared1, v1v2) * reciprocal; 
-  if (t < 0){
+  const float t = dotProduct(shared1, v1v2) * reciprocal;
+  if (t < 0) {
     intersectResult.steps = floatNaN;
     return intersectResult;
   }
-  
+
   intersectResult.steps = t;
   intersectResult.hitPoint = ray.origin_ + t * ray.direction_;
   intersectResult.id_triangle = id_triangle;
@@ -105,7 +105,7 @@ Renderer::Renderer(const Scene &scene) noexcept
   const vec3 shared2 = crossProduct(v1v2, ray.direction_);
   const float divisor = dotProduct(shared2, v1v3);
 
-  if (std::abs(divisor) < 1e-6f){
+  if (std::abs(divisor) < 1e-6f) {
     return false;
   }
 
@@ -114,22 +114,22 @@ Renderer::Renderer(const Scene &scene) noexcept
 
   const float reciprocal = 1 / divisor;
   const float u = dotProduct(shared1, ray.direction_) * reciprocal;
-  if (u < 0 || u > 1){
+  if (u < 0 || u > 1) {
     return false;
   }
   const float v = dotProduct(shared2, v1O) * reciprocal;
-  if (v < 0 || v > 1){
+  if (v < 0 || v > 1) {
     return false;
   }
   const float w = 1 - u - v;
-  if (w < 0 || w > 1){
+  if (w < 0 || w > 1) {
     return false;
   }
-  const float t = dotProduct(shared1, v1v2) * reciprocal; 
-  if (t < 0 || t * t > distanceSquared){
+  const float t = dotProduct(shared1, v1v2) * reciprocal;
+  if (t < 0 || t * t > distanceSquared) {
     return false;
   }
-  
+
   return true;
 }
 
@@ -142,8 +142,10 @@ getBarycentricCoordinates(const vec3 &hitPoint, const vec3 &pos_vertex1,
   const auto v1v3 = pos_vertex3 - pos_vertex1;
   const auto triangleAreaDouble = crossProduct(v1v2, v1v3).length();
   const auto reciprocal_triangleAreaDouble = 1 / triangleAreaDouble;
-  const auto u = crossProduct(v1p, v1v3).length() * reciprocal_triangleAreaDouble;
-  const auto v = crossProduct(v1v2, v1p).length() * reciprocal_triangleAreaDouble;
+  const auto u =
+      crossProduct(v1p, v1v3).length() * reciprocal_triangleAreaDouble;
+  const auto v =
+      crossProduct(v1v2, v1p).length() * reciprocal_triangleAreaDouble;
   return {u, v};
 }
 
@@ -183,17 +185,17 @@ interpolateNormal(const Scene &scene,
 }
 
 [[nodiscard]] float traceShadowRay(const Scene &scene, const vec3 &rayOrigin,
-                                    const vec3 &surfaceNormal) {
+                                   const vec3 &surfaceNormal) {
   float finalLightReached = 0;
   for (const auto &light : scene.lights_) {
     vec3 pointToLightSourceVec = light.position_ - rayOrigin;
     Ray ray{rayOrigin, pointToLightSourceVec};
     const auto cosineLawFactor =
         std::max(0.f, dotProduct(ray.direction_, surfaceNormal));
-    auto tmpLight =
-        light.intensity_ /
-        (4 * std::numbers::pi_v<float> * pointToLightSourceVec.lengthSquared()) *
-        cosineLawFactor;
+    auto tmpLight = light.intensity_ /
+                    (4 * std::numbers::pi_v<float> *
+                     pointToLightSourceVec.lengthSquared()) *
+                    cosineLawFactor;
     bool shadowRayIntersection = false;
     IntersectResult intersectResult;
     std::vector<size_t> trianglIds;
@@ -392,9 +394,11 @@ goochShade(const Scene &scene,
     if (tmp > 0.f)
       tmp = -tmp;
 
-    // gcc's std::pow implementation promotes from arguments float, int to double, double
-    // instead of casting, i trust the compiler will see that 5.f is actually an integer and will not use instructions for float * float
-    // at least if my assumption that there are instructions for float * int is correct ¯\_(ツ)_/¯
+    // gcc's std::pow implementation promotes from arguments float, int to
+    // double, double instead of casting, i trust the compiler will see that 5.f
+    // is actually an integer and will not use instructions for float * float at
+    // least if my assumption that there are instructions for float * int is
+    // correct ¯\_(ツ)_/¯
     float fresnelFactor = .5f * std::pow(1.f + tmp, 5.f);
 
     return Color::elementWiseAddition(fresnelFactor * reflectionColor,
@@ -409,8 +413,8 @@ handleDiffuseMaterial(const Scene &scene,
       intersectResult;
   // TODO: light can also be reflected from reflective material (or even
   // refractive) to the diffuse object. Maybe look into implementing virtual
-  // lights for each reflective reflective surface, by mirroring the position of
-  // the real source
+  // lights for each reflective surface, by mirroring the position of the real
+  // source
   vec3 finalNormal;
   if (scene.materials_[id_material].smoothShading) {
     finalNormal = interpolateNormal(scene, intersectResult);
@@ -500,7 +504,8 @@ handleRefractiveMaterial(const Scene &scene,
     Color refractionColor = traceRay(scene, refractedRay, RenderMode::Default);
 
     float fresnelFactor =
-        .5f * std::pow(1.f + dotProduct(previousRay.direction_, finalNormal), 10.f);
+        .5f *
+        std::pow(1.f + dotProduct(previousRay.direction_, finalNormal), 10.f);
 
     return Color::elementWiseAddition(fresnelFactor * reflectionColor,
                                       (1 - fresnelFactor) * refractionColor);
@@ -533,7 +538,8 @@ handleRefractiveMaterial(const Scene &scene,
     Color refractionColor = traceRay(scene, refractedRay, RenderMode::Default);
 
     float fresnelFactor =
-        .5f * std::pow(1.f - dotProduct(previousRay.direction_, finalNormal), 5.f);
+        .5f *
+        std::pow(1.f - dotProduct(previousRay.direction_, finalNormal), 5.f);
 
     return Color::elementWiseAddition(fresnelFactor * reflectionColor,
                                       (1 - fresnelFactor) * refractionColor);
@@ -542,19 +548,23 @@ handleRefractiveMaterial(const Scene &scene,
 
 void renderBucket(const Scene &scene, const size_t bucket,
                   const size_t bucketCols, Color *const buffer,
-                  RenderMode debugRenderMode, size_t rayMaxDepth, size_t raySamplesPerPixelSquareSide) noexcept {
+                  RenderMode debugRenderMode, size_t rayMaxDepth,
+                  size_t raySamplesPerPixelSquareSide) noexcept {
   const float resolutionWidth = static_cast<float>(scene.width_);
   const float resolutionHeight = static_cast<float>(scene.height_);
   size_t bucketOffsetX = (bucket % bucketCols) * scene.bucket_size_;
   size_t bucketOffsetY = (bucket / bucketCols) * scene.bucket_size_;
-  const float reciprocal = (1.f / (static_cast<float>(raySamplesPerPixelSquareSide) + 1.f));
+  const float reciprocal =
+      (1.f / (static_cast<float>(raySamplesPerPixelSquareSide) + 1.f));
   for (size_t y = 0; y < scene.bucket_size_; ++y) {
     for (size_t x = 0; x < scene.bucket_size_; ++x) {
       Color color;
-      for (size_t rx = 0; rx < raySamplesPerPixelSquareSide; ++rx){
-        for (size_t ry = 0; ry < raySamplesPerPixelSquareSide; ++ry){
-          float worldX = static_cast<float>(bucketOffsetX + x) + reciprocal * static_cast<float_t>(1 + rx);
-          float worldY = static_cast<float>(bucketOffsetY + y) + reciprocal * static_cast<float_t>(1 + ry);
+      for (size_t rx = 0; rx < raySamplesPerPixelSquareSide; ++rx) {
+        for (size_t ry = 0; ry < raySamplesPerPixelSquareSide; ++ry) {
+          float worldX = static_cast<float>(bucketOffsetX + x) +
+                         reciprocal * static_cast<float_t>(1 + rx);
+          float worldY = static_cast<float>(bucketOffsetY + y) +
+                         reciprocal * static_cast<float_t>(1 + ry);
 
           worldX /= resolutionWidth;
           worldY /= resolutionHeight;
@@ -567,25 +577,30 @@ void renderBucket(const Scene &scene, const size_t bucket,
           direction = direction * scene.camera_.orientation();
           Ray ray{scene.camera_.position(), direction, rayMaxDepth};
 
-          color = Color::elementWiseAddition(color, traceRay(scene, ray, debugRenderMode));
+          color = Color::elementWiseAddition(
+              color, traceRay(scene, ray, debugRenderMode));
         }
       }
-      color.red() /= static_cast<float>(raySamplesPerPixelSquareSide * raySamplesPerPixelSquareSide);
-      color.blue() /= static_cast<float>(raySamplesPerPixelSquareSide * raySamplesPerPixelSquareSide);
-      color.green() /= static_cast<float>(raySamplesPerPixelSquareSide * raySamplesPerPixelSquareSide);
+      color.red() /= static_cast<float>(raySamplesPerPixelSquareSide *
+                                        raySamplesPerPixelSquareSide);
+      color.blue() /= static_cast<float>(raySamplesPerPixelSquareSide *
+                                         raySamplesPerPixelSquareSide);
+      color.green() /= static_cast<float>(raySamplesPerPixelSquareSide *
+                                          raySamplesPerPixelSquareSide);
       buffer[(bucketOffsetX + x) + (bucketOffsetY + y) * scene.width_] = color;
     }
   }
 }
 
-Color* Renderer::createColorBuffer() const {
+Color *Renderer::createColorBuffer() const {
   return new Color[scene_.width_ * scene_.height_];
 }
 
-
-//todo pass settings as a singular struct context object
-std::chrono::milliseconds Renderer::takeSnapshot(Color* const buffer, RenderMode debugRenderMode, size_t raySamplesPerPixelSquareSide) const {
-  if (raySamplesPerPixelSquareSide == 0){
+// todo pass settings as a singular struct context object
+std::chrono::milliseconds
+Renderer::takeSnapshot(Color *const buffer, RenderMode debugRenderMode,
+                       size_t raySamplesPerPixelSquareSide) const {
+  if (raySamplesPerPixelSquareSide == 0) {
     throw std::runtime_error("Ray samples should be more than 0!");
   }
   const auto &width = scene_.width_;
@@ -603,7 +618,8 @@ std::chrono::milliseconds Renderer::takeSnapshot(Color* const buffer, RenderMode
   for (size_t i = 0; i < scene_.width_ * scene_.height_ / scene_.bucket_size_ /
                              scene_.bucket_size_;
        ++i) {
-    threadPool_.addTask([this, buffer, debugRenderMode, i, raySamplesPerPixelSquareSide]() {
+    threadPool_.addTask([this, buffer, debugRenderMode, i,
+                         raySamplesPerPixelSquareSide]() {
       renderBucket(scene_, i, scene_.width_ / scene_.bucket_size_, buffer,
                    debugRenderMode, rayMaxDepth_, raySamplesPerPixelSquareSide);
     });
@@ -624,7 +640,8 @@ std::chrono::milliseconds Renderer::takeSnapshot(Color* const buffer, RenderMode
     }
   }
   const auto timerEnd = std::chrono::steady_clock::now();
-  return std::chrono::duration_cast<std::chrono::milliseconds>(timerEnd - timerStart);
+  return std::chrono::duration_cast<std::chrono::milliseconds>(timerEnd -
+                                                               timerStart);
 }
 
 void Renderer::overwriteMaxRayDepth(size_t value) noexcept {
