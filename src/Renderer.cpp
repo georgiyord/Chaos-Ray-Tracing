@@ -190,8 +190,6 @@ interpolateNormal(const Scene &scene,
     IntersectResult intersectResult;
     std::vector<size_t> trianglIds;
     scene.accelerationTree_.intersects(ray, trianglIds);
-    trianglIds.erase(std::unique(trianglIds.begin(), trianglIds.end()),
-                     trianglIds.end());
     if (trianglIds.empty()) {
       finalLightReached += tmpLight;
       continue;
