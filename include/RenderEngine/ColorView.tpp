@@ -1,48 +1,43 @@
 // TODO: Change later to instead take number of bits per each channel (or
-// different for each channel) ColorView does not update automatically with
-// Color, currently a new ColorView needs to be generated for an update Color
+// different for each channel)
 
 #ifndef RenderEngine_ColorView_TPP
 #define RenderEngine_ColorView_TPP
 
-#include <RenderEngine/utils.hpp>
 #include <RenderEngine/Color.hpp>
+#include <RenderEngine/utils.hpp>
 #include <cmath>
 #include <ostream>
 namespace RenderEngine {
-  template <typename T>
-    requires std::same_as<T, u16> || std::same_as<T, u8>
-  class ColorView {
-    const Color &color_;
+template <typename T>
+  requires std::same_as<T, u16> || std::same_as<T, u8>
+class ColorView {
+  const Color &color_;
 
-    [[nodiscard]] T parseChannel(float channel) const noexcept {
-      return static_cast<T>(std::round(Color::clampChannel(channel) *
-                                       std::numeric_limits<T>::max()));
-    }
+  [[nodiscard]] static constexpr T parseChannel(float channel) noexcept {
+    return static_cast<T>(std::round(Color::clampChannel(channel) *
+                                     std::numeric_limits<T>::max()));
+  }
 
-    T red_ = parseChannel(color_.red());
-    T green_ = parseChannel(color_.green());
-    T blue_ = parseChannel(color_.blue());
+public:
+  ColorView(const Color &color) : color_(color) {}
 
-  public:
- ColorView(const Color &color) : color_(color) {}
+  [[nodiscard]] constexpr T red() const noexcept { return parseChannel(color_.red()); }
+  [[nodiscard]] constexpr T green() const noexcept { return parseChannel(color_.green()); }
+  [[nodiscard]] constexpr T blue() const noexcept { return parseChannel(color_.blue()); }
 
-    inline friend std::ostream &operator<<(std::ostream &os, ColorView<T> cv) {
-      os << static_cast<u32>(cv.red_) << " " << static_cast<u32>(cv.green_)
-         << " " << static_cast<u32>(cv.blue_);
-      return os;
-    }
+  [[nodiscard]] inline std::string toString() const {
+    // casting to u32 to avoid parsing T=u8 as a char symbol
+    return std::to_string(static_cast<u32>(red())) + " " +
+           std::to_string(static_cast<u32>(green())) + " " +
+           std::to_string(static_cast<u32>(blue()));
+  }
 
-    [[nodiscard]] std::string toString() const {
-      return std::to_string(static_cast<u32>(red_)) + " " +
-             std::to_string(static_cast<u32>(green_)) + " " +
-             std::to_string(static_cast<u32>(blue_));
-    }
-
-    [[nodiscard]] T red() const noexcept { return red_; }
-    [[nodiscard]] T green() const noexcept { return green_; }
-    [[nodiscard]] T blue() const noexcept { return blue_; }
-  };
+  inline friend std::ostream &operator<<(std::ostream &os, const ColorView<T> &cv) {
+    os << cv.toString();
+    return os;
+  }
+};
 } // namespace RenderEngine
 
 #endif // RenderEngine_ColorView_TPP
