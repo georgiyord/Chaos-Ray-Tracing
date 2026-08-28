@@ -292,9 +292,20 @@
           driveFileId = "19Ykb6ibzXLbLlWnAG41EClNC7R7ODKde";
           hash = "sha256-drMdreHAMf613+wMgPmfPlnos1Z4rEtdDc/1s+IrgCc=";
         };
-        CRT10-Scene8 = fetchGoogleDrive {
-          driveFileId = "1ntnrxOnKkaY1jPuW79hkZDjKJuXBIyt_";
-          hash = "sha256-C4jxJGki1psqeT6nu6D4K10vDLwomt8yTroz1IpTMF4=";
+        CRT10-Scene8 = patchScene {
+
+          package = (
+            fetchGoogleDrive {
+              driveFileId = "1ntnrxOnKkaY1jPuW79hkZDjKJuXBIyt_";
+              hash = "sha256-C4jxJGki1psqeT6nu6D4K10vDLwomt8yTroz1IpTMF4=";
+            }
+          );
+
+          jqFilters = [
+            materialsToTexturesFilter
+            bucketSizeFilter
+            dummyUvsFilter
+          ];
         };
 
         # CRT10 and CRT11 had the same tasks
@@ -436,6 +447,7 @@
           jqFilters = [
             materialsToTexturesFilter
             dummyUvsFilter
+            (cameraPositionFilter 0 0 (-1.55))
           ];
         };
 
