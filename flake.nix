@@ -123,6 +123,9 @@
       bucketSizeFilter = ''
         .settings.image_settings.bucket_size //= 24
       '';
+      cameraPositionFilter = x: y: z: ''
+        .camera.position = [${builtins.toJSON x}, ${builtins.toJSON y}, ${builtins.toJSON z}]
+      '';
       patchScene =
         {
           package,
