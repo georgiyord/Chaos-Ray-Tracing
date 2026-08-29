@@ -610,10 +610,9 @@ void Renderer::renderBucket(
   for (size_t y = 0; y < scene.bucket_size_; ++y) {
     for (size_t x = 0; x < scene.bucket_size_; ++x) {
       Color color;
-      // with this method multiple ray samples could be fired towards empty
-      // space without accomplishing anything
-      // TODO: shoot a central main ray per pixel, if result is not the
-      // backgroun color ( and/or some heuristics?), fire the additional samples
+      // TODO: to save wasted rays, an image/section can be created with one ray
+      // per pixel, and expand pixel accuracy by increasing ray samples for the
+      // pixel, if the previous pixel color is not the same as it's neighbours
       for (size_t rx = 0; rx < raySamplesPerPixelSquareSide; ++rx) {
         for (size_t ry = 0; ry < raySamplesPerPixelSquareSide; ++ry) {
           float worldX = static_cast<float>(bucketOffsetX + x) +
