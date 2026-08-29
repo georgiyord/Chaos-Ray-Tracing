@@ -16,6 +16,7 @@
 #include <cmath>
 #include <cstddef>
 #include <memory>
+#include <numbers>
 #include <random>
 #include <stack>
 #include <stdexcept>
@@ -343,12 +344,11 @@ goochShade(const Scene &scene,
 }
 
 [[nodiscard]] Color Renderer::traceRay(const Scene &scene, const Ray &ray,
-                                       RenderMode debugRenderMode) const {
+                                       RenderMode debugRenderMode,
+                                       bool doGlobalIllumination) const {
   IntersectResult intersectResult;
   std::vector<size_t> trianglIds;
   scene.accelerationTree_.intersects(ray, trianglIds);
-  trianglIds.erase(std::unique(trianglIds.begin(), trianglIds.end()),
-                   trianglIds.end());
   if (trianglIds.empty()) {
     return scene.backgroundColor_;
   }
@@ -387,16 +387,17 @@ goochShade(const Scene &scene,
   switch (scene.materials_[intersectResult.id_material].materialType) {
   case MaterialType::DIFFUSE:
     return handleDiffuseMaterial(intersectResult, ray.depthChances_,
-                                 debugRenderMode);
+                                 debugRenderMode, doGlobalIllumination);
   case MaterialType::CONSTANT:
     return getTextureColor(scene, intersectResult);
   case MaterialType::REFLECTIVE:
-    return handleReflectiveMaterial(scene, intersectResult, ray);
+    return handleReflectiveMaterial(scene, intersectResult, ray,
+                                    doGlobalIllumination);
   case MaterialType::REFRACTIVE: {
-    Color reflectionColor =
-        handleReflectiveMaterial(scene, intersectResult, ray);
-    Color refractionColor =
-        handleRefractiveMaterial(scene, intersectResult, ray);
+    Color reflectionColor = handleReflectiveMaterial(scene, intersectResult,
+                                                     ray, doGlobalIllumination);
+    Color refractionColor = handleRefractiveMaterial(scene, intersectResult,
+                                                     ray, doGlobalIllumination);
 
     vec3 finalNormal;
     if (scene.materials_[intersectResult.id_material].smoothShading) {
@@ -426,10 +427,9 @@ goochShade(const Scene &scene,
   }
 }
 
-[[nodiscard]] Color
-Renderer::handleDiffuseMaterial(const IntersectResult &intersectResult,
-                                size_t prevRayDepthChances,
-                                RenderMode debugRenderMode) const noexcept {
+[[nodiscard]] Color Renderer::handleDiffuseMaterial(
+    const IntersectResult &intersectResult, size_t prevRayDepthChances,
+    RenderMode debugRenderMode, bool doGlobalIllumination) const noexcept {
   if (prevRayDepthChances == 0) {
     return scene_.backgroundColor_;
   }
@@ -451,40 +451,63 @@ Renderer::handleDiffuseMaterial(const IntersectResult &intersectResult,
   // random utilities in the standard library are not thread safe
   thread_local std::random_device rd;
   thread_local std::mt19937 gen(rd());
-  thread_local std::uniform_real_distribution<float> dis(-180.f, 180.f);
+  thread_local std::uniform_real_distribution<float> dis(
+      -std::numbers::pi_v<float>, std::numbers::pi_v<float>);
 
   auto offsetHitPoint = hitPoint + RENDERENGINE_SHADOW_BIAS * finalNormal;
   Color commumilativeColor =
       traceShadowRay(scene_, offsetHitPoint, finalNormal) *
       getTextureColor(scene_, intersectResult);
-  size_t successful = 1;
 
-  for (size_t i = 0; i < n_diffuseReflectionsGI_; ++i) {
-    const float theta = dis(gen);
-    const float phi = dis(gen);
-    const vec3 randomUnitVec{std::cos(phi) * std::sin(theta),
-                             std::sin(phi) * std::sin(theta), std::cos(theta)};
-    const vec3 hemisphereSampleRayDir =
-        (finalNormal + randomUnitVec).normalise();
-    const Ray ray{intersectResult.hitPoint +
-                      hemisphereSampleRayDir * RENDERENGINE_HITPOINT_BIAS,
-                  hemisphereSampleRayDir, prevRayDepthChances - 1};
-    const Color result = traceRay(scene_, ray, debugRenderMode);
-    if (result != scene_.backgroundColor_) {
-      commumilativeColor =
-          Color::elementWiseAddition(commumilativeColor, result);
-      ++successful;
+  if (!doGlobalIllumination) {
+    return commumilativeColor;
+  } else {
+    size_t successful = 1;
+
+    for (size_t i = 0; i < n_diffuseReflectionsGI_; ++i) {
+      const float u1 = dis(gen);
+      const float u2 = dis(gen);
+      const float phi = 2.0f * std::numbers::pi_v<float> * u1;
+      const float sinTheta = std::sqrt(1.0f - u2 * u2);
+
+      const vec3 &v1 =
+          scene_
+              .vertices_[scene_.triangles_[intersectResult.id_triangle]
+                             .id_vertex1_]
+              .position;
+      const vec3 &v2 =
+          scene_
+              .vertices_[scene_.triangles_[intersectResult.id_triangle]
+                             .id_vertex2_]
+              .position;
+      const vec3 v1v2 = (v2 - v1).normalise();
+
+      const vec3 tangent =
+          (v1v2 - dotProduct(v1v2, finalNormal) * finalNormal).normalise();
+      const vec3 bitangent = crossProduct(tangent, finalNormal);
+
+      vec3 rayDir = sinTheta * std::cos(phi) * tangent + u2 * finalNormal +
+                    sinTheta * std::sin(phi) * bitangent;
+
+      const Ray ray{intersectResult.hitPoint +
+                        rayDir * RENDERENGINE_HITPOINT_BIAS,
+                    rayDir, prevRayDepthChances - 1};
+      const Color result = traceRay(scene_, ray, debugRenderMode, false);
+      if (result != scene_.backgroundColor_) {
+        commumilativeColor =
+            Color::elementWiseAddition(commumilativeColor, result);
+        ++successful;
+      }
     }
+    float reciprocal = 1.f / static_cast<float>(successful);
+    commumilativeColor *= reciprocal;
+    return commumilativeColor;
   }
-  float reciprocal = 1.f / static_cast<float>(successful);
-  commumilativeColor *= reciprocal;
-  return commumilativeColor;
 }
 
-[[nodiscard]] Color
-Renderer::handleReflectiveMaterial(const Scene &scene,
-                                   const IntersectResult &intersectResult,
-                                   const Ray &previousRay) const noexcept {
+[[nodiscard]] Color Renderer::handleReflectiveMaterial(
+    const Scene &scene, const IntersectResult &intersectResult,
+    const Ray &previousRay, bool doGlobalIllumination) const noexcept {
   if (previousRay.depthChances_ == 0) {
     return scene.backgroundColor_;
   }
@@ -509,16 +532,15 @@ Renderer::handleReflectiveMaterial(const Scene &scene,
   Ray reflectedRay = {offsetHitPoint, direction, previousRay.depthChances_ - 1};
 
   return Color::elementWiseMultiplication(
-      traceRay(scene, reflectedRay, RenderMode::Default),
+      traceRay(scene, reflectedRay, RenderMode::Default, doGlobalIllumination),
       getTextureColor(scene, intersectResult));
 }
 
 // Does not handle refractive and / or reflecive objects inside refractrive
 // objects
-[[nodiscard]] Color
-Renderer::handleRefractiveMaterial(const Scene &scene,
-                                   const IntersectResult &intersectResult,
-                                   const Ray &previousRay) const noexcept {
+[[nodiscard]] Color Renderer::handleRefractiveMaterial(
+    const Scene &scene, const IntersectResult &intersectResult,
+    const Ray &previousRay, bool doGlobalIllumination) const noexcept {
   if (previousRay.depthChances_ == 0) {
     return scene.backgroundColor_;
   }
@@ -553,8 +575,10 @@ Renderer::handleRefractiveMaterial(const Scene &scene,
     Ray refractedRay{hitPoint - RENDERENGINE_HITPOINT_BIAS * finalNormal,
                      refractionDirection, previousRay.depthChances_ - 1};
 
-    Color reflectionColor = traceRay(scene, reflectedRay, RenderMode::Default);
-    Color refractionColor = traceRay(scene, refractedRay, RenderMode::Default);
+    Color reflectionColor = traceRay(scene, reflectedRay, RenderMode::Default,
+                                     doGlobalIllumination);
+    Color refractionColor = traceRay(scene, refractedRay, RenderMode::Default,
+                                     doGlobalIllumination);
 
     // Shlick's aproximation
     const float reciprocate = 1.f / (ior + 1.f);
@@ -575,7 +599,8 @@ Renderer::handleRefractiveMaterial(const Scene &scene,
         2 * dotProduct(previousRay.direction_, finalNormal) * finalNormal;
     Ray reflectedRay = {hitPoint - RENDERENGINE_HITPOINT_BIAS * finalNormal,
                         reflectionDirection, previousRay.depthChances_ - 1};
-    Color reflectionColor = traceRay(scene, reflectedRay, RenderMode::Default);
+    Color reflectionColor = traceRay(scene, reflectedRay, RenderMode::Default,
+                                     doGlobalIllumination);
 
     auto ior = scene.materials_[id_material].ior;
     float cosI = dotProduct(finalNormal, previousRay.direction_);
@@ -592,7 +617,8 @@ Renderer::handleRefractiveMaterial(const Scene &scene,
     Ray refractedRay{hitPoint + RENDERENGINE_HITPOINT_BIAS * finalNormal,
                      refractionDirection, previousRay.depthChances_ - 1};
 
-    Color refractionColor = traceRay(scene, refractedRay, RenderMode::Default);
+    Color refractionColor = traceRay(scene, refractedRay, RenderMode::Default,
+                                     doGlobalIllumination);
 
     const float reciprocate = 1.f / (ior + 1.f);
     const float refractionRelation =
@@ -642,7 +668,7 @@ void Renderer::renderBucket(
           Ray ray{scene.camera_.position(), direction, rayMaxDepth};
 
           color = Color::elementWiseAddition(
-              color, traceRay(scene, ray, debugRenderMode));
+              color, traceRay(scene, ray, debugRenderMode, true));
         }
       }
       color.red() /= static_cast<float>(raySamplesPerPixelSquareSide *
@@ -711,5 +737,8 @@ Renderer::takeSnapshot(Color *const buffer, RenderMode debugRenderMode,
 
 void Renderer::overwriteMaxRayDepth(size_t value) noexcept {
   rayMaxDepth_ = value;
+}
+void Renderer::overwriteReflectionsGI(size_t value) noexcept {
+  n_diffuseReflectionsGI_ = value;
 }
 } // namespace RenderEngine

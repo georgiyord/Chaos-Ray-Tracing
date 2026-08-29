@@ -32,14 +32,16 @@ public:
   std::unique_ptr<Color[]> createColorBuffer() const;
 
   void overwriteMaxRayDepth(size_t) noexcept;
+  void overwriteReflectionsGI(size_t) noexcept;
 
-  Color handleDiffuseMaterial(const IntersectResult &, size_t,
-                              RenderMode) const noexcept;
+  Color handleDiffuseMaterial(const IntersectResult &, size_t, RenderMode,
+                              bool) const noexcept;
   Color handleReflectiveMaterial(const Scene &, const IntersectResult &,
-                                 const Ray &) const noexcept;
+                                 const Ray &, bool) const noexcept;
   Color handleRefractiveMaterial(const Scene &, const IntersectResult &,
-                                 const Ray &) const noexcept;
-  [[nodiscard]] Color traceRay(const Scene &, const Ray &, RenderMode) const;
+                                 const Ray &, bool) const noexcept;
+  [[nodiscard]] Color traceRay(const Scene &, const Ray &, RenderMode,
+                               bool) const;
   void renderBucket(const Scene &, const size_t, const size_t, Color *const,
                     RenderMode, size_t, size_t) const noexcept;
 };
