@@ -220,6 +220,7 @@ int main(int argc, char **argv) {
       scene.overwriteBackgroundColor(programSettings.backgroundColor);
     }
     // renderer.overwriteMaxRayDepth(1);
+    renderer.overwriteReflectionsGI(10);
     auto buffer = renderer.createColorBuffer();
     auto time =
         renderer.takeSnapshot(buffer.get(), programSettings.renderMode, 2);
