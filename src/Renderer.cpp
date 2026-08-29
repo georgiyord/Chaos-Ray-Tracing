@@ -646,6 +646,10 @@ void Renderer::renderBucket(
   }
 }
 
+// Maybe instead of having an API for allocating buffers for the current
+// scene/render configuration, have that buffer internally, which can be
+// accessed, so cleanup is handled entirely by us, without need for external
+// calls
 std::unique_ptr<Color[]> Renderer::createColorBuffer() const {
   return std::unique_ptr<Color[]>{new Color[scene_.width_ * scene_.height_]};
 }
@@ -681,9 +685,6 @@ Renderer::takeSnapshot(Color *const buffer, RenderMode debugRenderMode,
   threadPool_.startAndWait();
 
   float max_distance = 0.f;
-  // this is a stupid way of doing this
-  // TODO: change traceRay to return information about distance and hitpoint
-  // besides color
   if (debugRenderMode == RenderMode::DistanceShade) {
     for (size_t i = 0; i < scene_.width_ * scene_.height_; ++i) {
       max_distance = std::max(max_distance, buffer[i].red());
