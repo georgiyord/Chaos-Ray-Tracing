@@ -6,8 +6,10 @@
 
 #include "Color.hpp"
 #include "utils.hpp"
+
 #include <cmath>
 #include <ostream>
+
 namespace RenderEngine {
 template <typename T>
   requires std::same_as<T, u16> || std::same_as<T, u8>

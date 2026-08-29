@@ -3,6 +3,7 @@
 
 #include "Ray.hpp"
 #include "vec3.hpp"
+
 namespace RenderEngine {
 struct AABB {
   vec3 min;

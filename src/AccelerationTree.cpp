@@ -1,4 +1,5 @@
 #include "AccelerationTree.hpp"
+
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -74,7 +75,8 @@ size_t initHelper(std::vector<AccelerationTreeNode> &nodes,
     std::sort(nodes.back().triangleIds.begin(), nodes.back().triangleIds.end());
     return currentNodePos;
   } else {
-    // try to split by trying to keep triangles in the children around the same amount
+    // try to split by trying to keep triangles in the children around the same
+    // amount
     nodes.emplace_back(box, std::vector<size_t>{},
                        AccelerationTreeNode::undefinedChildId,
                        AccelerationTreeNode::undefinedChildId);

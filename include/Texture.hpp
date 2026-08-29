@@ -2,7 +2,9 @@
 #define RENDERENGINE_TEXTURE_HPP
 
 #include "Color.hpp"
+
 #include <string>
+
 namespace RenderEngine {
 
 enum class TextureType { ALBEDO, EDGES, CHECKER, BITMAP };

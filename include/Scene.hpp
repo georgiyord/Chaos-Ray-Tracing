@@ -12,6 +12,7 @@
 #include "Triangle.hpp"
 #include "Vertex.hpp"
 #include "vec2.hpp"
+
 #include <string>
 #include <vector>
 

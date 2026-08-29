@@ -1,4 +1,5 @@
 #include "Texture.hpp"
+
 #include <stdexcept>
 
 namespace RenderEngine {

@@ -1,6 +1,8 @@
 #ifndef RENDERENGINE_RAY_HPP
 #define RENDERENGINE_RAY_HPP
+
 #include "vec3.hpp"
+
 #include <cstddef>
 
 namespace RenderEngine {

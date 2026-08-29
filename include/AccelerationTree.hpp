@@ -4,6 +4,7 @@
 #include "AABB.hpp"
 #include "Triangle.hpp"
 #include "Vertex.hpp"
+
 #include <cstddef>
 #include <limits>
 #include <vector>

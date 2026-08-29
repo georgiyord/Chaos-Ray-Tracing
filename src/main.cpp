@@ -6,8 +6,8 @@
 #include <string>
 #include <string_view>
 
-#include "Renderer.hpp"
 #include "ColorView.tpp"
+#include "Renderer.hpp"
 #include "Scene.hpp"
 #include "utils.hpp"
 
@@ -221,7 +221,8 @@ int main(int argc, char **argv) {
     }
     // renderer.overwriteMaxRayDepth(1);
     auto buffer = renderer.createColorBuffer();
-    auto time = renderer.takeSnapshot(buffer.get(), programSettings.renderMode, 2);
+    auto time =
+        renderer.takeSnapshot(buffer.get(), programSettings.renderMode, 2);
     std::cout << time << std::endl;
     //   }
     //   const auto timerStart = std::chrono::steady_clock::now();

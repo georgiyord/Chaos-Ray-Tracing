@@ -1,16 +1,15 @@
 #include "ThreadPool.hpp"
 
-
 #ifdef DEBUG
 #ifndef RENDERENGINE_THREADPOOL_WORKERCOUNT
 #define RENDERENGINE_THREADPOOL_WORKERCOUNT 1
 #endif
 #else
 #ifndef RENDERENGINE_THREADPOOL_WORKERCOUNT
-#define RENDERENGINE_THREADPOOL_WORKERCOUNT (std::thread::hardware_concurrency())
+#define RENDERENGINE_THREADPOOL_WORKERCOUNT                                    \
+  (std::thread::hardware_concurrency())
 #endif
 #endif
-
 
 namespace RenderEngine {
 using TaskType = std::function<void()>;

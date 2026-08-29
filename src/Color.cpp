@@ -1,7 +1,9 @@
 #include "Color.hpp"
 #include "ColorView.tpp"
+
 #include <random>
 #include <stdexcept>
+
 namespace RenderEngine {
 float r, g, b;
 

@@ -2,7 +2,9 @@
 #define RenderEngine_Color_HPP
 
 #include "utils.hpp"
+
 #include <concepts>
+
 namespace RenderEngine {
 
 template <typename T>

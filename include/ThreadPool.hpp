@@ -8,6 +8,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+
 namespace RenderEngine {
 class ThreadPool {
   using TaskType = std::function<void()>;

@@ -12,5 +12,4 @@ struct Vertex {
 };
 } // namespace RenderEngine
 
-
 #endif // RENDERENGINE_VERTEX_HPP

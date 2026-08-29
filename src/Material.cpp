@@ -1,5 +1,7 @@
 #include "Material.hpp"
+
 #include <stdexcept>
+
 namespace RenderEngine {
 
 [[nodiscard]] MaterialType getMaterialTypeFromString(const std::string &str) {

@@ -4,6 +4,7 @@
 #include "Scene.hpp"
 #include "ThreadPool.hpp"
 #include "utils.hpp"
+
 #include <chrono>
 
 namespace RenderEngine {

@@ -309,13 +309,9 @@ Scene::Scene(size_t width, size_t height, size_t bucket_size,
 
 [[nodiscard]] Camera &Scene::camera() noexcept { return camera_; }
 
-void Scene::overwriteWidth(size_t width) noexcept {
-  width_ = width;
-}
+void Scene::overwriteWidth(size_t width) noexcept { width_ = width; }
 
-void Scene::overwriteHeight(size_t height) noexcept {
-  height_ = height;
-}
+void Scene::overwriteHeight(size_t height) noexcept { height_ = height; }
 
 void Scene::overwriteBackgroundColor(const Color &c) noexcept {
   backgroundColor_ = c;

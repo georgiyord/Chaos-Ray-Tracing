@@ -361,36 +361,30 @@ goochShade(const Scene &scene,
     return scene.backgroundColor_;
   }
   switch (debugRenderMode) {
-  case RenderMode::NormalShade:
-    return [intersectResult, &scene]() -> Color {
-      vec3 finalNormal;
-      if (scene.materials_[intersectResult.id_material].smoothShading) {
-        finalNormal = interpolateNormal(scene, intersectResult);
-      } else {
-        finalNormal = scene.triangleNormals_[intersectResult.id_triangle];
-      }
-      return Color{(finalNormal.x_ + 1.f) / 2, (finalNormal.y_ + 1.f) / 2,
-                   (finalNormal.z_ + 1.f) / 2};
-    }();
+  case RenderMode::NormalShade: {
+    vec3 finalNormal;
+    if (scene.materials_[intersectResult.id_material].smoothShading) {
+      finalNormal = interpolateNormal(scene, intersectResult);
+    } else {
+      finalNormal = scene.triangleNormals_[intersectResult.id_triangle];
+    }
+    return Color{(finalNormal.x_ + 1.f) / 2, (finalNormal.y_ + 1.f) / 2,
+                 (finalNormal.z_ + 1.f) / 2};
+  }
   case RenderMode::DistanceShade:
     return {intersectResult.steps, 0, 0};
   case RenderMode::GoochShade:
     return goochShade(scene, intersectResult);
-  case RenderMode::BarycentricShade:
-    return [intersectResult, &scene]() -> Color {
-      const auto [u, v] = getBarycentricCoordinates(scene, intersectResult);
-      return Color{u, v, 0};
-    }();
+  case RenderMode::BarycentricShade: {
+    const auto [u, v] = getBarycentricCoordinates(scene, intersectResult);
+    return Color{u, v, 0};
+  }
   case RenderMode::Default:
     break;
   default:
-    throw std::runtime_error("Invalid Render Mode!");
+    std::unreachable();
   }
   switch (scene.materials_[intersectResult.id_material].materialType) {
-  default:
-    throw std::runtime_error("An invalid material type was given at " +
-                             std::to_string(__LINE__) +
-                             ". That should not happen!");
   case MaterialType::DIFFUSE:
     return handleDiffuseMaterial(intersectResult, ray.depthChances_,
                                  debugRenderMode);
@@ -398,7 +392,7 @@ goochShade(const Scene &scene,
     return getTextureColor(scene, intersectResult);
   case MaterialType::REFLECTIVE:
     return handleReflectiveMaterial(scene, intersectResult, ray);
-  case MaterialType::REFRACTIVE:
+  case MaterialType::REFRACTIVE: {
     Color reflectionColor =
         handleReflectiveMaterial(scene, intersectResult, ray);
     Color refractionColor =
@@ -416,11 +410,19 @@ goochShade(const Scene &scene,
 
     const float &ior = scene.materials_[intersectResult.id_material].ior;
     const float reciprocate = 1.f / (ior + 1.f);
-    const float refractionRelation = (1.f - ior) * (1.f - ior) * reciprocate * reciprocate;
-    float fresnelFactor = refractionRelation + (1 - refractionRelation) * std::pow(1 - std::abs(dotProduct(finalNormal, ray.direction_)), 5.f);
+    const float refractionRelation =
+        (1.f - ior) * (1.f - ior) * reciprocate * reciprocate;
+    float fresnelFactor =
+        refractionRelation +
+        (1 - refractionRelation) *
+            std::pow(1 - std::abs(dotProduct(finalNormal, ray.direction_)),
+                     5.f);
 
     return Color::elementWiseAddition(fresnelFactor * reflectionColor,
                                       (1 - fresnelFactor) * refractionColor);
+  }
+  default:
+    std::unreachable();
   }
 }
 
@@ -554,10 +556,14 @@ Renderer::handleRefractiveMaterial(const Scene &scene,
     Color reflectionColor = traceRay(scene, reflectedRay, RenderMode::Default);
     Color refractionColor = traceRay(scene, refractedRay, RenderMode::Default);
 
-    //Shlick's aproximation
+    // Shlick's aproximation
     const float reciprocate = 1.f / (ior + 1.f);
-    const float refractionRelation = (ior - 1.f) * (ior - 1.f) * reciprocate * reciprocate;
-    float fresnelFactor = refractionRelation + (1 - refractionRelation) * std::pow(1 + dotProduct(finalNormal, previousRay.direction_), 5.f);
+    const float refractionRelation =
+        (ior - 1.f) * (ior - 1.f) * reciprocate * reciprocate;
+    float fresnelFactor =
+        refractionRelation +
+        (1 - refractionRelation) *
+            std::pow(1 + dotProduct(finalNormal, previousRay.direction_), 5.f);
 
     return Color::elementWiseAddition(fresnelFactor * reflectionColor,
                                       (1 - fresnelFactor) * refractionColor);
@@ -589,8 +595,12 @@ Renderer::handleRefractiveMaterial(const Scene &scene,
     Color refractionColor = traceRay(scene, refractedRay, RenderMode::Default);
 
     const float reciprocate = 1.f / (ior + 1.f);
-    const float refractionRelation = (1.f - ior) * (1.f - ior) * reciprocate * reciprocate;
-    float fresnelFactor = refractionRelation + (1 - refractionRelation) * std::pow(1 - dotProduct(finalNormal, previousRay.direction_), 5.f);
+    const float refractionRelation =
+        (1.f - ior) * (1.f - ior) * reciprocate * reciprocate;
+    float fresnelFactor =
+        refractionRelation +
+        (1 - refractionRelation) *
+            std::pow(1 - dotProduct(finalNormal, previousRay.direction_), 5.f);
 
     return Color::elementWiseAddition(fresnelFactor * reflectionColor,
                                       (1 - fresnelFactor) * refractionColor);

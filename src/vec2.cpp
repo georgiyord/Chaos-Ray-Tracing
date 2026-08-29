@@ -4,8 +4,8 @@
 #include <stdexcept>
 
 namespace RenderEngine {
- vec2::vec2(float x, float y) noexcept : x_(x), y_(y) {}
- vec2::vec2() noexcept : x_(0.f), y_(0.f) {}
+vec2::vec2(float x, float y) noexcept : x_(x), y_(y) {}
+vec2::vec2() noexcept : x_(0.f), y_(0.f) {}
 
 [[nodiscard]] vec2 vec2::zero() noexcept { return vec2(0.f, 0.f); };
 
@@ -25,13 +25,13 @@ namespace RenderEngine {
   return vec2(x_ + rhs.x_, y_ + rhs.y_);
 }
 
- vec2 &vec2::operator-=(const vec2 &rhs) noexcept {
+vec2 &vec2::operator-=(const vec2 &rhs) noexcept {
   x_ -= rhs.x_;
   y_ -= rhs.y_;
   return *this;
 }
 
- vec2 &vec2::operator+=(const vec2 &rhs) noexcept {
+vec2 &vec2::operator+=(const vec2 &rhs) noexcept {
   x_ += rhs.x_;
   y_ += rhs.y_;
   return *this;
@@ -49,13 +49,13 @@ namespace RenderEngine {
   return vec2(x_ / rhs, y_ / rhs);
 }
 
- vec2 &vec2::operator*=(float rhs) noexcept {
+vec2 &vec2::operator*=(float rhs) noexcept {
   x_ *= rhs;
   y_ *= rhs;
   return *this;
 }
 
- vec2 &vec2::operator/=(float rhs) noexcept {
+vec2 &vec2::operator/=(float rhs) noexcept {
   x_ /= rhs;
   y_ /= rhs;
   return *this;
@@ -83,13 +83,11 @@ namespace RenderEngine {
   return *this;
 }
 
-[[nodiscard]] float crossProduct(const vec2 &a,
-                                            const vec2 &b) noexcept {
+[[nodiscard]] float crossProduct(const vec2 &a, const vec2 &b) noexcept {
   return a.x_ * b.y_ - a.y_ * b.x_;
 }
 
-[[nodiscard]] float dotProduct(const vec2 &a,
-                                          const vec2 &b) noexcept {
+[[nodiscard]] float dotProduct(const vec2 &a, const vec2 &b) noexcept {
   return a.x_ * b.x_ + a.y_ * b.y_;
 }
 } // namespace RenderEngine

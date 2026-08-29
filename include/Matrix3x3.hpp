@@ -2,6 +2,7 @@
 #define RENDERENGINE_MATRIX3X3_HPP
 
 #include "vec3.hpp"
+
 #include <array>
 #include <cstddef>
 
@@ -24,6 +25,6 @@ public:
 
 [[nodiscard]] vec3 operator*(const vec3 &vec, const Matrix3x3 &matrix) noexcept;
 vec3 &operator*=(vec3 &vec, const Matrix3x3 &matrix) noexcept;
-}
+} // namespace RenderEngine
 
 #endif // RENDERENGINE_MATRIX3X3_HPP

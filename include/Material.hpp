@@ -5,8 +5,7 @@
 
 namespace RenderEngine {
 enum class MaterialType { DIFFUSE, REFLECTIVE, REFRACTIVE, CONSTANT };
-[[nodiscard]] MaterialType
-getMaterialTypeFromString(const std::string &str);
+[[nodiscard]] MaterialType getMaterialTypeFromString(const std::string &str);
 
 struct Material {
   MaterialType materialType = MaterialType::CONSTANT;
