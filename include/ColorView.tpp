@@ -4,8 +4,8 @@
 #ifndef RenderEngine_ColorView_TPP
 #define RenderEngine_ColorView_TPP
 
-#include <RenderEngine/Color.hpp>
-#include <RenderEngine/utils.hpp>
+#include "Color.hpp"
+#include "utils.hpp"
 #include <cmath>
 #include <ostream>
 namespace RenderEngine {

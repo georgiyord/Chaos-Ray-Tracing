@@ -1,7 +1,7 @@
 #ifndef RENDERENGINE_MATRIX3X3_HPP
 #define RENDERENGINE_MATRIX3X3_HPP
 
-#include <RenderEngine/vec3.hpp>
+#include "vec3.hpp"
 #include <array>
 #include <cstddef>
 

@@ -1,9 +1,9 @@
 #ifndef RENDERENGINE_ACCELERATIONTREE_HPP
 #define RENDERENGINE_ACCELERATIONTREE_HPP
 
-#include "RenderEngine/AABB.hpp"
-#include "RenderEngine/Triangle.hpp"
-#include "RenderEngine/Vertex.hpp"
+#include "AABB.hpp"
+#include "Triangle.hpp"
+#include "Vertex.hpp"
 #include <cstddef>
 #include <limits>
 #include <vector>

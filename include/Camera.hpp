@@ -1,8 +1,8 @@
 #ifndef RENDERENGINE_CAMERA_HPP
 #define RENDERENGINE_CAMERA_HPP
 
-#include "RenderEngine/Matrix3x3.hpp"
-#include "RenderEngine/vec3.hpp"
+#include "Matrix3x3.hpp"
+#include "vec3.hpp"
 
 namespace RenderEngine {
 

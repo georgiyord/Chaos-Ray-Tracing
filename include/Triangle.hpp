@@ -1,8 +1,7 @@
 #ifndef RENDERENGINE_TRIANGLE_HPP
 #define RENDERENGINE_TRIANGLE_HPP
 
-#include <RenderEngine/Ray.hpp>
-#include <RenderEngine/vec3.hpp>
+#include <cstddef>
 
 namespace RenderEngine {
 // Note: in right-hand rule coordinate system, triangles points are defined

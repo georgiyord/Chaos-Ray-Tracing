@@ -1,7 +1,7 @@
 #ifndef RENDERENGINE_LIGHT_HPP
 #define RENDERENGINE_LIGHT_HPP
 
-#include <RenderEngine/vec3.hpp>
+#include "vec3.hpp"
 
 namespace RenderEngine {
 struct Light {

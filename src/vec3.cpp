@@ -1,4 +1,5 @@
-#include <RenderEngine/vec3.hpp>
+#include "vec3.hpp"
+
 #include <cmath>
 #include <stdexcept>
 

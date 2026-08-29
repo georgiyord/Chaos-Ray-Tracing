@@ -1,4 +1,4 @@
-#include "RenderEngine/Light.hpp"
+#include "Light.hpp"
 
 namespace RenderEngine {
 

@@ -1,4 +1,5 @@
-#include <RenderEngine/vec2.hpp>
+#include "vec2.hpp"
+
 #include <cmath>
 #include <stdexcept>
 

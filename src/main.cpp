@@ -1,4 +1,3 @@
-#include "RenderEngine/Renderer.hpp"
 #include <charconv>
 #include <cmath>
 #include <cstdlib>
@@ -7,9 +6,10 @@
 #include <string>
 #include <string_view>
 
-#include <RenderEngine/ColorView.tpp>
-#include <RenderEngine/Scene.hpp>
-#include <RenderEngine/utils.hpp>
+#include "Renderer.hpp"
+#include "ColorView.tpp"
+#include "Scene.hpp"
+#include "utils.hpp"
 
 using namespace RenderEngine;
 

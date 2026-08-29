@@ -1,8 +1,8 @@
 #ifndef RRENDERENGINE_MATERIAL_HPP
 #define RRENDERENGINE_MATERIAL_HPP
 
-#include <RenderEngine/Color.hpp>
 #include <string>
+
 namespace RenderEngine {
 enum class MaterialType { DIFFUSE, REFLECTIVE, REFRACTIVE, CONSTANT };
 [[nodiscard]] MaterialType

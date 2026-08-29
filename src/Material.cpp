@@ -1,4 +1,4 @@
-#include <RenderEngine/Material.hpp>
+#include "Material.hpp"
 #include <stdexcept>
 namespace RenderEngine {
 

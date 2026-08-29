@@ -1,4 +1,4 @@
-#include <RenderEngine/Texture.hpp>
+#include "Texture.hpp"
 #include <stdexcept>
 
 namespace RenderEngine {

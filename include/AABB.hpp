@@ -1,8 +1,8 @@
 #ifndef RENDERENGINE_AABB_HPP
 #define RENDERENGINE_AABB_HPP
 
-#include "RenderEngine/Ray.hpp"
-#include "RenderEngine/vec3.hpp"
+#include "Ray.hpp"
+#include "vec3.hpp"
 namespace RenderEngine {
 struct AABB {
   vec3 min;

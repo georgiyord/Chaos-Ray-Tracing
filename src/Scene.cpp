@@ -1,24 +1,26 @@
 // Split this into a Scene and Renderer class to both follow the diagrams from
 // the presentation and to reduce the size of it
 
-#include "RenderEngine/Scene.hpp"
-#include "RenderEngine/AABB.hpp"
-#include "RenderEngine/AccelerationTree.hpp"
-#include "RenderEngine/Bitmap.hpp"
-#include "RenderEngine/Color.hpp"
-#include "RenderEngine/Material.hpp"
-#include "RenderEngine/Mesh.hpp"
-#include "RenderEngine/Texture.hpp"
-#include "RenderEngine/Triangle.hpp"
-#include "RenderEngine/Vertex.hpp"
-#include "RenderEngine/utils.hpp"
-#include "RenderEngine/vec3.hpp"
-#include "rapidjson/document.h"
-#include "rapidjson/istreamwrapper.h"
-#include "rapidjson/rapidjson.h"
-#include "rapidjson/schema.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/writer.h"
+#include "Scene.hpp"
+#include "AABB.hpp"
+#include "AccelerationTree.hpp"
+#include "Bitmap.hpp"
+#include "Color.hpp"
+#include "Material.hpp"
+#include "Mesh.hpp"
+#include "Texture.hpp"
+#include "Triangle.hpp"
+#include "Vertex.hpp"
+#include "utils.hpp"
+#include "vec3.hpp"
+
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
+#include <rapidjson/rapidjson.h>
+#include <rapidjson/schema.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
 #include <cstddef>
 #include <filesystem>
 #include <fstream>

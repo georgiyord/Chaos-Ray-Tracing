@@ -6,8 +6,10 @@ help:
 DEFINITIONS ?=
 WERROR ?= -Werror
 
+INCLUDES = -isystem./vendor/include -I./include
+
 CXX      = g++
-CXXFLAGS = -std=c++26 -I./include/ -fPIC -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wdouble-promotion $(DEFINITIONS)
+CXXFLAGS = -std=c++26 $(INCLUDES) -fPIC -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wdouble-promotion $(DEFINITIONS)
 
 CXXFLAGS_DEBUG   = $(CXXFLAGS) -g -O0 -fsanitize=address,undefined -fno-omit-frame-pointer -DDEBUG
 CXXFLAGS_RELEASE_SYMBOLS = $(CXXFLAGS) -g -O3 -march=native -flto=auto $(WERROR) -DNDEBUG

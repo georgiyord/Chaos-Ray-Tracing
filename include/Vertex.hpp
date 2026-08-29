@@ -1,7 +1,7 @@
 #ifndef RENDERENGINE_VERTEX_HPP
 #define RENDERENGINE_VERTEX_HPP
 
-#include <RenderEngine/vec3.hpp>
+#include "vec3.hpp"
 
 namespace RenderEngine {
 

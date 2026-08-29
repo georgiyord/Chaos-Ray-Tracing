@@ -1,7 +1,7 @@
 #ifndef RENDERENGINE_BITMAP_HPP
 #define RENDERENGINE_BITMAP_HPP
 
-#include "RenderEngine/Color.hpp"
+#include "Color.hpp"
 #include <cstddef>
 #include <string>
 

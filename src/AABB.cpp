@@ -1,5 +1,5 @@
-#include "RenderEngine/AABB.hpp"
-#include "RenderEngine/utils.hpp"
+#include "AABB.hpp"
+#include "utils.hpp"
 #include <algorithm>
 
 namespace RenderEngine {

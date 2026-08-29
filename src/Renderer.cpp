@@ -1,18 +1,16 @@
-// Split this into a Scene and Renderer class to both follow the diagrams from
-// the presentation and to reduce the size of it
+#include "Renderer.hpp"
+#include "AccelerationTree.hpp"
+#include "Color.hpp"
+#include "Material.hpp"
+#include "Matrix3x3.hpp"
+#include "Scene.hpp"
+#include "Texture.hpp"
+#include "ThreadPool.hpp"
+#include "Triangle.hpp"
+#include "Vertex.hpp"
+#include "utils.hpp"
+#include "vec3.hpp"
 
-#include "RenderEngine/Renderer.hpp"
-#include "RenderEngine/AccelerationTree.hpp"
-#include "RenderEngine/Color.hpp"
-#include "RenderEngine/Material.hpp"
-#include "RenderEngine/Matrix3x3.hpp"
-#include "RenderEngine/Scene.hpp"
-#include "RenderEngine/Texture.hpp"
-#include "RenderEngine/ThreadPool.hpp"
-#include "RenderEngine/Triangle.hpp"
-#include "RenderEngine/Vertex.hpp"
-#include "RenderEngine/utils.hpp"
-#include "RenderEngine/vec3.hpp"
 #include <cassert>
 #include <chrono>
 #include <cmath>

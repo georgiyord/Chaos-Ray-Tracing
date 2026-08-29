@@ -1,7 +1,7 @@
 #ifndef RENDERENGINE_TEXTURE_HPP
 #define RENDERENGINE_TEXTURE_HPP
 
-#include "RenderEngine/Color.hpp"
+#include "Color.hpp"
 #include <string>
 namespace RenderEngine {
 

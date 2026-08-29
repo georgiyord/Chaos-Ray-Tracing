@@ -1,17 +1,17 @@
 #ifndef RENDERENGINE_SCENE_HPP
 #define RENDERENGINE_SCENE_HPP
 
-#include "RenderEngine/AccelerationTree.hpp"
-#include "RenderEngine/Bitmap.hpp"
-#include "RenderEngine/Camera.hpp"
-#include "RenderEngine/Color.hpp"
-#include "RenderEngine/Light.hpp"
-#include "RenderEngine/Material.hpp"
-#include "RenderEngine/Mesh.hpp"
-#include "RenderEngine/Texture.hpp"
-#include "RenderEngine/Triangle.hpp"
-#include "RenderEngine/Vertex.hpp"
-#include "RenderEngine/vec2.hpp"
+#include "AccelerationTree.hpp"
+#include "Bitmap.hpp"
+#include "Camera.hpp"
+#include "Color.hpp"
+#include "Light.hpp"
+#include "Material.hpp"
+#include "Mesh.hpp"
+#include "Texture.hpp"
+#include "Triangle.hpp"
+#include "Vertex.hpp"
+#include "vec2.hpp"
 #include <string>
 #include <vector>
 

@@ -1,4 +1,4 @@
-#include <RenderEngine/Mesh.hpp>
+#include "Mesh.hpp"
 
 namespace RenderEngine {
 Mesh::Mesh(size_t id_firstTriangle, size_t n_Triangles,

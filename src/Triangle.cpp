@@ -1,5 +1,5 @@
-#include <RenderEngine/Triangle.hpp>
-#include <RenderEngine/utils.hpp>
+#include "Triangle.hpp"
+
 namespace RenderEngine {
 // Note: in right-hand rule coordinate system, triangles points are defined
 // counter clockwise

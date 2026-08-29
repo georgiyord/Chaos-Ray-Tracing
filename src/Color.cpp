@@ -1,5 +1,5 @@
-#include <RenderEngine/Color.hpp>
-#include <RenderEngine/ColorView.tpp>
+#include "Color.hpp"
+#include "ColorView.tpp"
 #include <random>
 #include <stdexcept>
 namespace RenderEngine {

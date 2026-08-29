@@ -1,7 +1,6 @@
 #ifndef RENDERENGINE_MESH_HPP
 #define RENDERENGINE_MESH_HPP
 
-#include <RenderEngine/vec3.hpp>
 #include <cstddef>
 
 namespace RenderEngine {

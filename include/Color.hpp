@@ -1,7 +1,7 @@
 #ifndef RenderEngine_Color_HPP
 #define RenderEngine_Color_HPP
 
-#include <RenderEngine/utils.hpp>
+#include "utils.hpp"
 #include <concepts>
 namespace RenderEngine {
 

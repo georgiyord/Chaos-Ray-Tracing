@@ -1,9 +1,9 @@
 #ifndef RENDERENGINE_RENDERER_HPP
 #define RENDERENGINE_RENDERER_HPP
 
-#include "RenderEngine/Scene.hpp"
-#include "RenderEngine/ThreadPool.hpp"
-#include "RenderEngine/utils.hpp"
+#include "Scene.hpp"
+#include "ThreadPool.hpp"
+#include "utils.hpp"
 #include <chrono>
 
 namespace RenderEngine {

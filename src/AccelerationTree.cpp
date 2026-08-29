@@ -1,4 +1,4 @@
-#include "RenderEngine/AccelerationTree.hpp"
+#include "AccelerationTree.hpp"
 #include <algorithm>
 #include <utility>
 #include <vector>
