@@ -28,8 +28,10 @@ Renderer::Renderer(const Scene &scene) noexcept
     : threadPool_{ThreadPool::getInstance()}, scene_{scene} {}
 
 // Moller method with barycentric coordinates
-[[nodiscard]] IntersectResult intersects(const Scene &scene, const Ray &ray,
-                                         size_t id_triangle) noexcept {
+template <bool rayHasMaxDistance>
+[[nodiscard]] IntersectResult
+intersects_helper(const Scene &scene, const Ray &ray, size_t id_triangle,
+                  float distanceSquared) noexcept {
   const auto [id_vertex1, id_vertex2, id_vertex3, id_mesh] =
       scene.triangles_[id_triangle];
   IntersectResult intersectResult;
@@ -38,8 +40,6 @@ Renderer::Renderer(const Scene &scene) noexcept
   const vec3 &v3 = scene.vertices_[id_vertex3].position;
   const vec3 v1v2 = v2 - v1;
   const vec3 v1v3 = v3 - v1;
-  const vec3 v1O = ray.origin_ - v1;
-  const vec3 shared1 = crossProduct(v1v3, v1O);
   const vec3 shared2 = crossProduct(v1v2, ray.direction_);
   const float divisor = dotProduct(shared2, v1v3);
 
@@ -47,6 +47,9 @@ Renderer::Renderer(const Scene &scene) noexcept
     intersectResult.steps = floatNaN;
     return intersectResult;
   }
+
+  const vec3 v1O = ray.origin_ - v1;
+  const vec3 shared1 = crossProduct(v1v3, v1O);
 
   const float reciprocal = 1 / divisor;
   const float u = dotProduct(shared1, ray.direction_) * reciprocal;
@@ -70,6 +73,13 @@ Renderer::Renderer(const Scene &scene) noexcept
     return intersectResult;
   }
 
+  if constexpr (rayHasMaxDistance) {
+    if (t * t > distanceSquared) {
+      intersectResult.steps = floatNaN;
+      return intersectResult;
+    }
+  }
+
   intersectResult.steps = t;
   intersectResult.hitPoint = ray.origin_ + t * ray.direction_;
   intersectResult.id_triangle = id_triangle;
@@ -79,9 +89,11 @@ Renderer::Renderer(const Scene &scene) noexcept
   return intersectResult;
 }
 
-[[nodiscard]] bool intersectsFast(const Scene &scene, const Ray &ray,
-                                  const size_t id_triangle,
-                                  const float distanceSquared) noexcept {
+// Moller method with barycentric coordinates
+template <bool rayHasMaxDistance>
+[[nodiscard]] bool intersectsFast_helper(const Scene &scene, const Ray &ray,
+                                         size_t id_triangle,
+                                         float distanceSquared) noexcept {
   const auto [id_vertex1, id_vertex2, id_vertex3, id_mesh] =
       scene.triangles_[id_triangle];
   const vec3 &v1 = scene.vertices_[id_vertex1].position;
@@ -113,11 +125,39 @@ Renderer::Renderer(const Scene &scene) noexcept
     return false;
   }
   const float t = dotProduct(shared1, v1v2) * reciprocal;
-  if (t < 0 || t * t > distanceSquared) {
+  if (t < 0) {
     return false;
   }
 
+  if constexpr (rayHasMaxDistance) {
+    if (t * t > distanceSquared) {
+      return false;
+    }
+  }
+
   return true;
+}
+
+[[nodiscard]] IntersectResult intersects(const Scene &scene, const Ray &ray,
+                                         size_t id_triangle) noexcept {
+  return intersects_helper<false>(scene, ray, id_triangle, 0.f);
+}
+
+[[nodiscard]] IntersectResult intersects(const Scene &scene, const Ray &ray,
+                                         const size_t id_triangle,
+                                         const float distanceSquared) noexcept {
+  return intersects_helper<true>(scene, ray, id_triangle, distanceSquared);
+}
+
+[[nodiscard]] bool intersectsFast(const Scene &scene, const Ray &ray,
+                                  size_t id_triangle) noexcept {
+  return intersectsFast_helper<false>(scene, ray, id_triangle, 0.f);
+}
+
+[[nodiscard]] bool intersectsFast(const Scene &scene, const Ray &ray,
+                                  const size_t id_triangle,
+                                  const float distanceSquared) noexcept {
+  return intersectsFast_helper<true>(scene, ray, id_triangle, distanceSquared);
 }
 
 [[nodiscard]] inline vec2
@@ -184,7 +224,6 @@ interpolateNormal(const Scene &scene,
                      pointToLightSourceVec.lengthSquared()) *
                     cosineLawFactor;
     bool shadowRayIntersection = false;
-    IntersectResult intersectResult;
     std::vector<size_t> trianglIds;
     scene.accelerationTree_.intersects(ray, trianglIds);
     if (trianglIds.empty()) {
@@ -192,12 +231,6 @@ interpolateNormal(const Scene &scene,
       continue;
     }
     for (const size_t id : trianglIds) {
-      // TODO: handle shadow ray through refractive material correctly
-      if (scene
-              .materials_[scene.meshes_[scene.triangles_[id].id_mesh_]
-                              .id_material_]
-              .materialType == MaterialType::REFRACTIVE)
-        continue;
       shadowRayIntersection =
           intersectsFast(scene, ray, id, pointToLightSourceVec.lengthSquared());
       if (shadowRayIntersection) {
@@ -413,7 +446,7 @@ Renderer::handleDiffuseMaterial(const IntersectResult &intersectResult,
 
   // global illumination
 
-  // random applicances in the standard library are not thread safe
+  // random utilities in the standard library are not thread safe
   thread_local std::random_device rd;
   thread_local std::mt19937 gen(rd());
   thread_local std::uniform_real_distribution<float> dis(-180.f, 180.f);
@@ -461,7 +494,7 @@ Renderer::handleReflectiveMaterial(const Scene &scene,
   } else {
     finalNormal = scene.triangleNormals_[id_triangle];
   }
-  bool frontSide = dotProduct(previousRay.direction_, finalNormal) < .0f;
+  const bool frontSide = dotProduct(previousRay.direction_, finalNormal) < .0f;
   vec3 offsetHitPoint;
   if (frontSide) {
     offsetHitPoint = hitPoint + RENDERENGINE_HITPOINT_BIAS * finalNormal;
