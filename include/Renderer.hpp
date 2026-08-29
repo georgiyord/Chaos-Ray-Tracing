@@ -34,14 +34,13 @@ public:
   void overwriteMaxRayDepth(size_t) noexcept;
   void overwriteReflectionsGI(size_t) noexcept;
 
-  Color handleDiffuseMaterial(const IntersectResult &, size_t, RenderMode,
-                              bool) const noexcept;
+  Color handleDiffuseMaterial(const IntersectResult &, size_t,
+                              RenderMode) const noexcept;
   Color handleReflectiveMaterial(const Scene &, const IntersectResult &,
-                                 const Ray &, bool) const noexcept;
+                                 const Ray &) const noexcept;
   Color handleRefractiveMaterial(const Scene &, const IntersectResult &,
-                                 const Ray &, bool) const noexcept;
-  [[nodiscard]] Color traceRay(const Scene &, const Ray &, RenderMode,
-                               bool) const;
+                                 const Ray &) const noexcept;
+  [[nodiscard]] Color traceRay(const Scene &, const Ray &, RenderMode) const;
   void renderBucket(const Scene &, const size_t, const size_t, Color *const,
                     RenderMode, size_t, size_t) const noexcept;
 };
