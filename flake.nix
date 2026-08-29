@@ -18,12 +18,12 @@
         '';
 
         installPhase = ''
-          mkdir -p $out/include $out/lib $out/bin
+          mkdir -p $out/include/RenderEngine $out/lib $out/bin
           cp build/Debug/libRenderEngine.so $out/lib/libRenderEngine-debug.so
           cp build/Release/libRenderEngine.so $out/lib/libRenderEngine-release.so
           cp build/ReleaseWithSymbols/libRenderEngine.so $out/lib/libRenderEngine-releaseWithSymbols.so
           cp build/Release/crt_release $out/bin/crt_render
-          cp -r include/. $out/include/
+          cp -r include/. $out/include/RenderEngine/
         '';
       };
       mkCRT =
