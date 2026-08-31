@@ -24,6 +24,17 @@ class Renderer {
   size_t n_diffuseReflectionsGI_ = 0;
   const Scene &scene_;
 
+
+  [[nodiscard]] Color handleDiffuseMaterial(const IntersectResult &, size_t,
+                              RenderMode) const noexcept;
+  [[nodiscard]] Color handleReflectiveMaterial(const Scene &, const IntersectResult &,
+                                 const Ray &) const noexcept;
+  [[nodiscard]] Color handleRefractiveMaterial(const Scene &, const IntersectResult &,
+                                 const Ray &) const noexcept;
+  [[nodiscard]] Color traceRay(const Scene &, const Ray &, RenderMode) const;
+  void renderBucket(const Scene &, const size_t, const size_t, Color *const,
+                    RenderMode, size_t, size_t) const noexcept;
+  
 public:
   Renderer(const Scene &) noexcept;
   std::chrono::milliseconds
@@ -33,16 +44,6 @@ public:
 
   void overwriteMaxRayDepth(size_t) noexcept;
   void overwriteReflectionsGI(size_t) noexcept;
-
-  Color handleDiffuseMaterial(const IntersectResult &, size_t,
-                              RenderMode) const noexcept;
-  Color handleReflectiveMaterial(const Scene &, const IntersectResult &,
-                                 const Ray &) const noexcept;
-  Color handleRefractiveMaterial(const Scene &, const IntersectResult &,
-                                 const Ray &) const noexcept;
-  [[nodiscard]] Color traceRay(const Scene &, const Ray &, RenderMode) const;
-  void renderBucket(const Scene &, const size_t, const size_t, Color *const,
-                    RenderMode, size_t, size_t) const noexcept;
 };
 } // namespace RenderEngine
 
