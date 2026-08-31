@@ -525,9 +525,10 @@ goochShade(const Scene &scene,
                     cosTheta * finalNormal +
                     sinTheta * std::sin(phi) * bitangent;
 
+      // gi ray depth should be configurable through the Renderer object
       const Ray ray{intersectResult.hitPoint +
                         finalNormal * RENDERENGINE_HITPOINT_BIAS,
-                    rayDir, prevRayDepthChances - 1};
+                    rayDir, std::min(prevRayDepthChances - 1, static_cast<size_t>(1))};
       const Color result = Color::elementWiseMultiplication(
           getTextureColor(scene_, intersectResult),
           traceRay(scene_, ray, debugRenderMode));
@@ -627,8 +628,9 @@ goochShade(const Scene &scene,
         (1 - refractionRelation) *
             std::pow(1 + dotProduct(finalNormal, previousRay.direction_), 5.f);
 
-    return Color::elementWiseAddition(fresnelFactor * reflectionColor,
+    Color accumulatedColor = Color::elementWiseAddition(fresnelFactor * reflectionColor,
                                       (1 - fresnelFactor) * refractionColor);
+    return Color::elementWiseMultiplication(accumulatedColor, getTextureColor(scene_, intersectResult));
   } else {
     // ray hit from inside
 
@@ -664,8 +666,9 @@ goochShade(const Scene &scene,
         (1 - refractionRelation) *
             std::pow(1 - dotProduct(finalNormal, previousRay.direction_), 5.f);
 
-    return Color::elementWiseAddition(fresnelFactor * reflectionColor,
+    Color accumulatedColor = Color::elementWiseAddition(fresnelFactor * reflectionColor,
                                       (1 - fresnelFactor) * refractionColor);
+    return Color::elementWiseMultiplication(accumulatedColor, getTextureColor(scene_, intersectResult));
   }
 }
 
