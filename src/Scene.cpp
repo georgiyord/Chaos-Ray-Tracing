@@ -149,8 +149,8 @@ Scene::Scene(size_t width, size_t height, size_t bucket_size,
     case TextureType::EDGES:
       textures.emplace_back(
           TextureType::EDGES,
-          arrToColorObject(textureObject["inner_color"].GetArray()),
           arrToColorObject(textureObject["edge_color"].GetArray()),
+          arrToColorObject(textureObject["inner_color"].GetArray()),
           textureObject["edge_width"].GetFloat(), -1);
       break;
     case TextureType::CHECKER:
