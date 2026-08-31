@@ -49,38 +49,59 @@ intersects_helper(const Scene &scene, const Ray &ray, size_t id_triangle,
     return intersectResult;
   }
 
+  const bool divisorPositive = divisor > 0.f;
+
   const vec3 v1O = ray.origin_ - v1;
   const vec3 shared1 = crossProduct(v1v3, v1O);
 
-  const float reciprocal = 1 / divisor;
-  const float u = dotProduct(shared1, ray.direction_) * reciprocal;
-  if (u < 0 || u > 1) {
-    intersectResult.steps = floatNaN;
-    return intersectResult;
+  const float u = dotProduct(shared1, ray.direction_);
+  if (divisorPositive){
+    if (u < 0.f || u > divisor){
+      intersectResult.steps = floatNaN;
+      return intersectResult;
+    }
   }
-  const float v = dotProduct(shared2, v1O) * reciprocal;
-  if (v < 0 || v > 1) {
-    intersectResult.steps = floatNaN;
-    return intersectResult;
+  else {
+    if (u > 0.f || u < divisor){
+      intersectResult.steps = floatNaN;
+      return intersectResult;
+    }
   }
-  const float w = 1 - u - v;
-  if (w < 0 || w > 1) {
-    intersectResult.steps = floatNaN;
-    return intersectResult;
+  const float v = dotProduct(shared2, v1O);
+  if (divisorPositive){
+    if (v < 0.f || v > divisor || u + v > divisor ){
+      intersectResult.steps = floatNaN;
+      return intersectResult;
+    }
   }
-  const float t = dotProduct(shared1, v1v2) * reciprocal;
-  if (t < 0) {
-    intersectResult.steps = floatNaN;
-    return intersectResult;
+  else {
+    if (v > 0.f || v < divisor || u + v < divisor){
+      intersectResult.steps = floatNaN;
+      return intersectResult;
+    }
   }
-
+  float t = dotProduct(shared1, v1v2);
+  if (divisorPositive){
+    if (t < 0.f){
+      intersectResult.steps = floatNaN;
+      return intersectResult;
+    }
+  }
+  else {
+    if (t > 0.f){
+      intersectResult.steps = floatNaN;
+      return intersectResult;
+    }
+  }
+  
   if constexpr (rayHasMaxDistance) {
-    if (t * t > distanceSquared) {
+    if (t * t > distanceSquared * divisor * divisor) {
       intersectResult.steps = floatNaN;
       return intersectResult;
     }
   }
 
+  t = t / divisor;
   intersectResult.steps = t;
   intersectResult.hitPoint = ray.origin_ + t * ray.direction_;
   intersectResult.id_triangle = id_triangle;
@@ -109,29 +130,47 @@ template <bool rayHasMaxDistance>
     return false;
   }
 
+  const bool divisorPositive = divisor > 0.f;
+
   const vec3 v1O = ray.origin_ - v1;
   const vec3 shared1 = crossProduct(v1v3, v1O);
 
-  const float reciprocal = 1 / divisor;
-  const float u = dotProduct(shared1, ray.direction_) * reciprocal;
-  if (u < 0 || u > 1) {
-    return false;
+  const float u = dotProduct(shared1, ray.direction_);
+  if (divisorPositive){
+    if (u < 0.f || u > divisor){
+      return false;
+    }
   }
-  const float v = dotProduct(shared2, v1O) * reciprocal;
-  if (v < 0 || v > 1) {
-    return false;
+  else {
+    if (u > 0.f || u < divisor){
+      return false;
+    }
   }
-  const float w = 1 - u - v;
-  if (w < 0 || w > 1) {
-    return false;
+  const float v = dotProduct(shared2, v1O);
+  if (divisorPositive){
+    if (v < 0.f || v > divisor || u + v > divisor ){
+      return false;
+    }
   }
-  const float t = dotProduct(shared1, v1v2) * reciprocal;
-  if (t < 0) {
-    return false;
+  else {
+    if (v > 0.f || v < divisor || u + v < divisor){
+      return false;
+    }
   }
-
+  const float t = dotProduct(shared1, v1v2);
+  if (divisorPositive){
+    if (t < 0.f){
+      return false;
+    }
+  }
+  else {
+    if (t > 0.f){
+      return false;
+    }
+  }
+  
   if constexpr (rayHasMaxDistance) {
-    if (t * t > distanceSquared) {
+    if (t * t > distanceSquared * divisor * divisor) {
       return false;
     }
   }
